@@ -29,6 +29,9 @@ lexical: $(LFILE)
 syntax-c: $(YFILE)
 	$(BISON) -o $(YFC) -d -v $(YFILE)
 
+scanner: lexical
+	$(CC) main.c lex.yy.c -lfl -o scanner
+
 -include $(patsubst %.o, %.d, $(OBJS))
 
 # 定义的一些伪目标

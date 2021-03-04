@@ -1,0 +1,29 @@
+int main(){
+    int 0x8; //error
+    int 6_worng; //error
+    int 61293890;
+    int 90128+asdasdasasd
+    int 8989_askdjaskldjkla
+    int alskdjaskldjail90-8129038jaksdkl
+    int lkasjdklajdklasd++_+()_123128973
+    int a = -1;
+    int a = -123123;
+    int a = 01239123;
+    int a = 1231231;
+    int a  =12938012031023001203;
+    float b = 1.23123;
+    float b = 1.2312.32323;
+    float b = 10.1;
+    float b = 1.000;
+    float b = 000.123231;
+    float b = 0.1213123;
+    float b = -12312.3123123123;
+    float b = -0000000012313.12312313012312;
+    float b = -0.0000000;
+    float b = 1.29837e912389013;
+    int a = 000;
+    float b = .123123123;
+    float b = 12312321.;
+    int a = a + b + C - a - c -d * a / a + 2 +3 * a / 10 /2;
+    int a = ! a & a && a | a || a !! a > 1 < 2 >= 2 <= 2213 > a < a <=abc;
+}

@@ -74,7 +74,7 @@ COMMENT {COMMENT_LINES}|{COMMENT_LINE}
 {RB} {    }
 {LC} {    }
 {RC} {    }
-{INT} {  yylval = atoi(yytext); return INT;  }
+{INT} {  yylval.type_int = atoi(yytext); return INT;  }
 {FLOAT} {  }
 {ID} {    }
 {WS} { }

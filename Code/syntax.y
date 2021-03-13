@@ -8,13 +8,11 @@
 %union {
     int type_int;
     float type_float;
-    double type_double;   
+    char* type_string;
 }
 
-%token <type_int> INT
-%token <type_float> FLOAT
-%token ADD SUB MUL DIV
-%type <type_double> Exp Factor Term
+%token SEMI COMMA TYPE STRUCT LC RC ID LB INT RB LP RP RETURN IF ELSE WHILE
+%token ASSIGNOP AND OR RELOP PLUS MINUS STAR DIV NOT FLOAT DOT
 
 %%
 /* High-level Definitions */
@@ -35,7 +33,7 @@ Specifier : TYPE
     | StructSpecifier
     ;
 StructSpecifier : STRUCT OptTag LC DefList RC
-    | STRUCT OptTag
+    | STRUCT Tag
     ;
 OptTag : ID
     |
@@ -60,6 +58,12 @@ CompSt : LC DefList StmtList RC
 StmtList : Stmt StmtList
     |
     ;
+Stmt : Exp SEMI
+    | CompSt
+    | RETURN Exp SEMI
+    | IF LP Exp RP Stmt %prec LOWER_THAN_ELSE
+    | IF LP Exp RP Stmt ELSE Stmt
+    | WHILE LP Exp RP Stmt
 
 /* Local Definitions */
 DefList : Def DefList

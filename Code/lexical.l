@@ -50,33 +50,33 @@ COMMENT_LINES \/\*(.|\n)*\*\/
 COMMENT {COMMENT_LINES}|{COMMENT_LINE}
 %%
 
-{IF} {    }
-{ELSE} {    }
-{WHILE} {    }
-{STRUCT} {    }
-{RETURN} {    }
-{TYPE} {    }
-{SEMI} {    }
-{COMMA} {    }
-{ASSIGNOP} {    }
-{RELOP} {    }
-{PLUS} { return ADD;   }
-{MINUS} {  return SUB;  }
-{STAR} {  return MUL;  }
+{IF} {  return IF;  }
+{ELSE} {  return ELSE;  }
+{WHILE} {  return WHILE;  }
+{STRUCT} {  return STRUCT;  }
+{RETURN} {  return RETURN;  }
+{TYPE} {  return TYPE;  }
+{SEMI} {  return SEMI;  }
+{COMMA} {  return COMMA;  }
+{ASSIGNOP} {  return ASSIGNOP;  }
+{RELOP} {  return RELOP;  }
+{PLUS} { return PLUS;   }
+{MINUS} {  return MINUS;  }
+{STAR} {  return STAR;  }
 {DIV} {  return DIV;  }
-{AND} {    }
-{OR} {    }
-{DOT} {    }
-{NOT} {    }
-{LP} {    }
-{RP} {    }
-{LB} {    }
-{RB} {    }
-{LC} {    }
-{RC} {    }
+{AND} {  return AND;  }
+{OR} {  return OR;  }
+{DOT} {  return DOT;  }
+{NOT} {  return NOT;  }
+{LP} {  return LP;  }
+{RP} {  return RP;  }
+{LB} {  return LB;  }
+{RB} {  return RB;  }
+{LC} {  return LC;  }
+{RC} {  return RC;  }
 {INT} {  yylval.type_int = atoi(yytext); return INT;  }
-{FLOAT} {  }
-{ID} {    }
+{FLOAT} { yylval.type_float = atof(yytext); return FLOAT; }
+{ID} {  yylval.type_string = yytext; return ID;  }
 {WS} { }
 {COMMENT} {
     for(int i = 0;i<yyleng;i++){

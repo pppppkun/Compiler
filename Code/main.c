@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "global.h"
 //extern FILE* yyin;
 int yyrestart(FILE*);
 int yyparse();

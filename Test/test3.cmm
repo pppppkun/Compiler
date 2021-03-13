@@ -26,4 +26,9 @@ int main(){
     float b = 12312321.;
     int a = a + b + C - a - c -d * a / a + 2 +3 * a / 10 /2;
     int a = ! a & a && a | a || a !! a > 1 < 2 >= 2 <= 2213 > a < a <=abc;
+    // askldjsakjasd
+    /asdasasd;
+    /*  asdasd 
+    adasds as dasasd*/
+    /*askljdaslkdjs /*djkalsdjkasdjk */asdsadasdas */
 }

@@ -3,6 +3,7 @@
 //extern FILE* yyin;
 int yyrestart(FILE*);
 int yyparse();
+extern int yydebug;
 int main(int argc, char** argv){
     if(argc <= 1) return 1;
     FILE *f = fopen(argv[1], "r");
@@ -13,5 +14,5 @@ int main(int argc, char** argv){
     yyrestart(f);
     yyparse();
     return 0;
-
+ 
 }

@@ -12,7 +12,7 @@
 
 IF if
 ELSE else
-WHILE while
+WHILE while 
 SEMI ;
 COMMA ,
 ASSIGNOP =

@@ -47,6 +47,7 @@ Specifier : TYPE
     ;
 StructSpecifier : STRUCT OptTag LC DefList RC
     | STRUCT Tag
+    | STRUCT OptTag LC error RC
     ;
 OptTag : ID
     |
@@ -61,6 +62,7 @@ VarDec : ID
     ;
 FunDec : ID LP VarList RP
     | ID LP RP
+    | ID LP error RP
     ;
 VarList : ParamDec COMMA VarList
     | ParamDec
@@ -70,6 +72,7 @@ ParamDec : Specifier VarDec
 
 /* Statements */
 CompSt : LC DefList StmtList RC
+    | LC error RC
     ;
 StmtList : Stmt StmtList
     |
@@ -91,6 +94,7 @@ DefList : Def DefList
     |
     ;
 Def : Specifier DecList SEMI
+    | Specifier error SEMI
     ;
 DecList : Dec
     | Dec COMMA DecList
@@ -117,6 +121,9 @@ Exp : Exp ASSIGNOP Exp
     | ID
     | INT
     | FLOAT
+    | Exp LB error RB
+    | ID LP error RP
+    | LP error RP
     ;
 Args : Exp COMMA Args
     | Exp

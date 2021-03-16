@@ -8,8 +8,6 @@
       yycolumn += yyleng;
 %}
 
-%option yylineno
-
 IF if
 ELSE else
 WHILE while 
@@ -62,7 +60,7 @@ COMMENT {COMMENT_LINES}|{COMMENT_LINE}
 {RELOP} {  return RELOP;  }
 {PLUS} { return PLUS;   }
 {MINUS} {  return MINUS;  }
-{STAR} {  return STAR;  }
+{STAR} {  return STAR; }
 {DIV} {  return DIV;  }
 {AND} {  return AND;  }
 {OR} {  return OR;  }
@@ -79,10 +77,31 @@ COMMENT {COMMENT_LINES}|{COMMENT_LINE}
 {ID} {  yylval.type_string = yytext; return ID;  }
 {WS} { }
 {COMMENT} {
-    for(int i = 0;i<yyleng;i++){
-        if(yytext[i]=='\n') yylineno++;
+    int flag = 0;
+    if(yytext[0]=='/' && yytext[1]=='*'){
+        int i = 0;
+        printf("flag=%d\n",flag);
+        for(i = 2;i<yyleng-1;i++){
+            if(yytext[i] == '\n') {
+                yylineno++;
+            }
+            if(yytext[i]=='*' && yytext[i+1]=='/'){
+                if(flag == 1){
+                    printf("Error type B at Line %d: syntax error near %c\n", yylineno, yytext[i]);
+                }
+                if(flag == 0) flag = 1;
+            }
+        }
+    }
+    else{
+        for(int i = 0;i<yyleng;i++){
+            if(yytext[i]=='\n') {
+                yycolumn = 1;
+                yylineno++;
+            }
+        }
     }
 }
-\n { yycolumn = 1;}
+\n { yycolumn = 1; yylineno++;}
 . {printf("Error type A at Line %d: Mysterious character \"%s\"\n", yylineno, yytext);}
 

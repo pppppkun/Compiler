@@ -36,6 +36,9 @@ ExtDefList : ExtDef ExtDefList
 ExtDef : Specifier ExtDecList SEMI
     | Specifier SEMI
     | Specifier FunDec CompSt
+    | Specifier error SEMI
+    | Specifier error RC
+    | error SEMI
     ;
 ExtDecList : VarDec
     | VarDec COMMA ExtDecList
@@ -47,7 +50,9 @@ Specifier : TYPE
     ;
 StructSpecifier : STRUCT OptTag LC DefList RC
     | STRUCT Tag
-    | STRUCT OptTag LC error RC
+    | STRUCT error LC DefList RC
+    | STRUCT error LC error RC
+    | STRUCT error RC
     ;
 OptTag : ID
     |
@@ -63,6 +68,7 @@ VarDec : ID
 FunDec : ID LP VarList RP
     | ID LP RP
     | ID LP error RP
+    | error LP VarList RP
     ;
 VarList : ParamDec COMMA VarList
     | ParamDec
@@ -72,7 +78,7 @@ ParamDec : Specifier VarDec
 
 /* Statements */
 CompSt : LC DefList StmtList RC
-    | LC error RC
+    | error RC
     ;
 StmtList : Stmt StmtList
     |
@@ -83,9 +89,13 @@ Stmt : Exp SEMI
     | IF LP Exp RP Stmt %prec LOWER_THAN_ELSE
     | IF LP Exp RP Stmt ELSE Stmt
     | WHILE LP Exp RP Stmt
-    | error SEMI
+    | RETURN error SEMI
     | IF LP error RP Stmt %prec LOWER_THAN_ELSE
+    | IF LP Exp RP error %prec LOWER_THAN_ELSE
+    | IF LP error RP error %prec LOWER_THAN_ELSE
     | IF LP error RP Stmt ELSE Stmt
+    | IF LP Exp RP error ELSE Stmt
+    | IF LP Exp RP Stmt ELSE error
     | WHILE LP error RP Stmt
     ;
 
@@ -121,9 +131,9 @@ Exp : Exp ASSIGNOP Exp
     | ID
     | INT
     | FLOAT
-    | Exp LB error RB
-    | ID LP error RP
     | LP error RP
+    | ID LP error RP
+    | Exp LB error RB
     ;
 Args : Exp COMMA Args
     | Exp

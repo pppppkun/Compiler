@@ -1,0 +1,13 @@
+Error type B at Line 2: syntax error near 0
+Error type B at Line 11: syntax error near 1239123
+Error type B at Line 15: syntax error near 32323
+Error type B at Line 18: syntax error near 0
+Error type B at Line 21: syntax error near 0
+Error type B at Line 23: syntax error near e912389013
+Error type B at Line 24: syntax error near 0
+Error type B at Line 25: syntax error near .
+Error type B at Line 26: syntax error near ;
+Error type A at Line 28: Mysterious character "&"
+Error type B at Line 28: syntax error near a
+Error type A at Line 28: Mysterious character "|"
+Error type B at Line 33: syntax error near /

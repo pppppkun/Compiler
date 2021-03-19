@@ -1,9 +1,10 @@
-int main(){
-    int 0x8; //error
-    int 6_worng; //error
-    int 61293890;
-    int 90128+asdasdasasd //error
-    int 8989_askdjaskldjkla //error
-    int alskdjaskldjail90-8129038jaksdkl //error
-    int lkasjdklajdklasd++_+()_123128973 //error
+int a = 1;
+int add(int b)
+{
+    return a + b;
+}
+int main()
+{
+    int sum;
+    sum = add(2);
 }

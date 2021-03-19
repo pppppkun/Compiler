@@ -134,6 +134,7 @@ Exp : Exp ASSIGNOP Exp
     | LP error RP
     | ID LP error RP
     | Exp LB error RB
+    | Exp error Exp
     ;
 Args : Exp COMMA Args
     | Exp

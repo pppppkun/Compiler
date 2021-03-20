@@ -54,6 +54,9 @@ COMMENT {COMMENT_LINES}|{COMMENT_LINE}
     if(yytext[0]=='/' && yytext[1]=='*'){
         char c = input();
         while(1){
+            if(c=='\0') {
+                return DIV;
+            }
             if(c=='\n') yylineno++;
             if(c == '*'){
                 c = input();

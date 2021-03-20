@@ -97,6 +97,7 @@ Stmt : Exp SEMI
     | IF LP Exp RP error ELSE Stmt
     | IF LP Exp RP Stmt ELSE error
     | WHILE LP error RP Stmt
+    | error SEMI
     ;
 
 /* Local Definitions */
@@ -134,7 +135,24 @@ Exp : Exp ASSIGNOP Exp
     | LP error RP
     | ID LP error RP
     | Exp LB error RB
-    | Exp error Exp
+    | Exp ASSIGNOP error
+    | Exp AND error
+    | Exp OR error
+    | Exp RELOP error
+    | Exp PLUS error
+    | Exp MINUS error
+    | Exp STAR error
+    | Exp DIV error
+    | MINUS error
+    | NOT error
+    | error ASSIGNOP Exp
+    // | error AND Exp
+    // | error OR Exp
+    // | error RELOP Exp
+    // | error PLUS Exp
+    // | error MINUS Exp
+    // | error STAR Exp
+    // | error DIV Exp
     ;
 Args : Exp COMMA Args
     | Exp

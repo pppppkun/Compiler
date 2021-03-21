@@ -4,7 +4,7 @@
     #include <stdio.h>
     int yyerror(char* msg);
     int buildAST(char* name, int childSum, ...);
-    int AST_PRINT_FLAG = 1;
+    extern int AST_PRINT_FLAG;
 %}
 
 
@@ -75,7 +75,6 @@ ParamDec : Specifier VarDec {$$=buildAST("ParamDec", 2,$1,$2);}
 
 /* Statements */
 CompSt : LC DefList StmtList RC {$$=buildAST("CompSt",4,$1,$2,$3,$4);}
-    | error RC
     ;
 StmtList : Stmt StmtList {$$=buildAST("StmtList", 2,$1,$2);}
     | {$$=buildAST("StmtList", -1);}
@@ -94,7 +93,8 @@ Stmt : Exp SEMI {$$=buildAST("Stmt",2,$1,$2);}
     | IF LP Exp RP error ELSE Stmt
     | IF LP Exp RP Stmt ELSE error
     | WHILE LP error RP Stmt
-    | error SEMI
+    // | error SEMI
+    | Exp error
     ;
 
 /* Local Definitions */
@@ -142,7 +142,7 @@ Exp : Exp ASSIGNOP Exp {$$=buildAST("Exp",3,$1,$2,$3);}
     | Exp DIV error
     | MINUS error
     | NOT error
-    | error ASSIGNOP Exp
+    // | error ASSIGNOP Exp
     // | error AND Exp
     // | error OR Exp
     // | error RELOP Exp
@@ -160,5 +160,6 @@ Args : Exp COMMA Args {$$ = buildAST("Args", 3, $1,$2,$3);}
 int yyerror(char* msg){
     AST_PRINT_FLAG = 0;
     //printf("error: %s\n",msg);
+    if(yytext[0]=='/') printf("COMMENT ERROR");
     printf("Error type B at Line %d: %s near %s\n", yylineno, msg,yytext);
 }

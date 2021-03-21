@@ -1,18 +1,21 @@
-int main()
+/***comment
+still
+*/
+/* ////\\asfdlkajhsldf\\\\<>@#$
+*/
+int main() //a function
 {
-    while(i < 3)
+    float h, s; int i;
+    h = s = 100 //;
+    h = h / 2; // first
+    i = 2;
+    /* a new comment*/
+    while (i <= 10) //\\\//\\/*
     {
-        while(j < 4)
-        {
-            if(a[i][j] > max)
-            {
-                max=a[i][j];
-                max_i=i;
-                max_j=j;
-            }
-            j = j + 1;
-        }
+        s = s + 2 * h;
+        h = h / 2 /*\/\/\/\/\*\/\/\\****\/*/;
         i = i + 1;
     }
     return 0;
 }
+/**end ~??

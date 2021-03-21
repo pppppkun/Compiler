@@ -1,6 +1,7 @@
 #!/bin/bash
 PARSER='./parser'
 path="../Test"
+MAKE=`make `
 for i in `ls $path`
 do
 	t=`$PARSER $path/$i`

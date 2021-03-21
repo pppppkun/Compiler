@@ -9,6 +9,7 @@
       yycolumn += yyleng;
     void my_debug(char *str, int line);
     int buildAST(char* name, int childSum, ...);
+    extern int AST_PRINT_FLAG;
 %}
 
 IF if
@@ -57,6 +58,7 @@ COMMENT {COMMENT_LINES}|{COMMENT_LINE}
         char c = input();
         while(1){
             if(c=='\0') {
+                yytext[1]='/';
                 return DIV;
             }
             if(c=='\n') yylineno++;
@@ -102,5 +104,5 @@ COMMENT {COMMENT_LINES}|{COMMENT_LINE}
 {ID} { yylval=buildAST("ID",0,yylineno);my_debug("ID",yylineno);  return ID;  }
 {WS} { }
 \n { yycolumn = 1; yylineno++;}
-. {printf("Error type A at Line %d: Mysterious character \"%s\"\n", yylineno, yytext);}
+. {AST_PRINT_FLAG=0; printf("Error type A at Line %d: Mysterious character \"%s\"\n", yylineno, yytext);}
 

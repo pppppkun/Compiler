@@ -6,6 +6,7 @@
 /* deal with debug */
 #define DEBUG 0
 #define AST_DEBUG 0
+int AST_PRINT_FLAG;
 
 /* deal with flex and bison */
 void yyrestart(FILE*);

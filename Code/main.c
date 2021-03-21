@@ -52,7 +52,7 @@ int buildAST(char *name, int childSum, ...)
     }
     else
     {
-        printf("// %s %d//\n", node.name, node.lineno);
+        // printf("// %s %d//\n", node.name, node.lineno);
     }
     va_end(child);
     nodes[nodes_point++] = node;
@@ -106,6 +106,7 @@ int print_AST(int now, int space)
 
 int main(int argc, char **argv)
 {
+    AST_PRINT_FLAG = 1;
     nodes = (ASTNode *)malloc(sizeof(ASTNode) * 100000);
     // int index = buildAST("EPSILON", -1);
     // printf("%s %d", nodes[index].name, nodes[index].lineno);

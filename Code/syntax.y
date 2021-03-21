@@ -3,6 +3,7 @@
     #include "lex.yy.c"
     #include <stdio.h>
     int yyerror(char* msg);
+    int buildAST(char* name, int childSum, ...);
 %}
 
 %union {

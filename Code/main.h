@@ -5,13 +5,13 @@
 
 int yyrestart(FILE*);
 int yyparse();
-
+int buildAST(char* name, int childSum, ...);
 extern int yydebug;
-
+typedef struct ASTNode ASTNode;
 struct ASTNode{
-    char[32] name;
+    char name[32];
     int lineno;
-    char[32] value;
+    char value[32];
     ASTNode* child;
     ASTNode* brother;
 };

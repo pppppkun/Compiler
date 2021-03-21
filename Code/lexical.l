@@ -1,5 +1,6 @@
 %{
     #include "syntax.tab.h"
+    #include "main.h"
     int yycolumn = 1;
     #define YY_USER_ACTION \
       yylloc.first_line = yylloc.last_line = yylineno; \
@@ -7,6 +8,7 @@
       yylloc.last_column = yycolumn + yyleng - 1;\
       yycolumn += yyleng;
     void my_debug(char *str, int line);
+    int buildAST(char* name, int childSum, ...);
 %}
 
 IF if
@@ -71,33 +73,33 @@ COMMENT {COMMENT_LINES}|{COMMENT_LINE}
         yylineno++;
     }
 }
-{IF} { my_debug("IF",yylineno); return IF;  }
-{ELSE} { my_debug("ELSE",yylineno); return ELSE;  }
-{WHILE} { my_debug("WHILE",yylineno); return WHILE;  }
-{STRUCT} { my_debug("STRUCT",yylineno); return STRUCT;  }
-{RETURN} { my_debug("RETURN",yylineno); return RETURN;  }
-{TYPE} { my_debug("TYPE",yylineno); return TYPE;  }
-{SEMI} { my_debug("SEMI",yylineno); return SEMI;  }
-{COMMA} { my_debug("COMMA",yylineno); return COMMA;  }
-{ASSIGNOP} { my_debug("ASSIGNOP",yylineno); return ASSIGNOP;  }
-{RELOP} { my_debug("RELOP",yylineno); return RELOP;  }
-{PLUS} { my_debug("PLUS",yylineno); return PLUS;   }
-{MINUS} { my_debug("MINUS",yylineno); return MINUS;  }
-{STAR} { my_debug("STAR",yylineno); return STAR; }
-{DIV} { my_debug("DIV",yylineno); return DIV;  }
-{AND} { my_debug("AND",yylineno); return AND;  }
-{OR} { my_debug("OR",yylineno); return OR;  }
-{DOT} { my_debug("DOT",yylineno); return DOT;  }
-{NOT} { my_debug("NOT",yylineno); return NOT;  }
-{LP} { my_debug("LP",yylineno); return LP;  }
-{RP} { my_debug("RP",yylineno); return RP;  }
-{LB} { my_debug("LB",yylineno); return LB;  }
-{RB} { my_debug("RB",yylineno); return RB;  }
-{LC} { my_debug("LC",yylineno); return LC;  }
-{RC} { my_debug("RC",yylineno); return RC;  }
-{INT} { my_debug("INT",yylineno); yylval.type_int = atoi(yytext); return INT;  }
-{FLOAT} { my_debug("FLOAT",yylineno); yylval.type_float = atof(yytext); return FLOAT; }
-{ID} { my_debug("ID",yylineno); yylval.type_string = yytext; return ID;  }
+{IF} { yylval=buildAST("IF", 0, yylineno);my_debug("IF",yylineno); return IF;  }
+{ELSE} { yylval=buildAST("ELSE", 0, yylineno);my_debug("ELSE",yylineno); return ELSE;  }
+{WHILE} { yylval=buildAST("WHILE",0,yylineno);my_debug("WHILE",yylineno); return WHILE;  }
+{STRUCT} { yylval=buildAST("STRUCT",0,yylineno);my_debug("STRUCT",yylineno); return STRUCT;  }
+{RETURN} { yylval=buildAST("RETURN",0,yylineno);my_debug("RETURN",yylineno); return RETURN;  }
+{TYPE} { yylval=buildAST("TYPE", 0, yylineno);my_debug("TYPE",yylineno); return TYPE;  }
+{SEMI} { yylval=buildAST("SEMI",0,yylineno);my_debug("SEMI",yylineno); return SEMI;  }
+{COMMA} { yylval=buildAST("COMMA",0,yylineno);my_debug("COMMA",yylineno); return COMMA;  }
+{ASSIGNOP} { yylval=buildAST("ASSIGNOP", 0, yylineno);my_debug("ASSIGNOP",yylineno); return ASSIGNOP;  }
+{RELOP} { yylval=buildAST("RELOP",0,yylineno);my_debug("RELOP",yylineno); return RELOP;  }
+{PLUS} { yylval=buildAST("PLUS",0,yylineno);my_debug("PLUS",yylineno); return PLUS;   }
+{MINUS} { yylval=buildAST("MINUS",0,yylineno);my_debug("MINUS",yylineno); return MINUS;  }
+{STAR} { yylval=buildAST("STAR",0,yylineno);my_debug("STAR",yylineno); return STAR; }
+{DIV} { yylval=buildAST("DIV",0,yylineno);my_debug("DIV",yylineno); return DIV;  }
+{AND} { yylval=buildAST("AND",0,yylineno);my_debug("AND",yylineno); return AND;  }
+{OR} { yylval=buildAST("OR",0,yylineno);my_debug("OR",yylineno); return OR;  }
+{DOT} { yylval=buildAST("DOT",0,yylineno);my_debug("DOT",yylineno); return DOT;  }
+{NOT} { yylval=buildAST("NOT",0,yylineno);my_debug("NOT",yylineno); return NOT;  }
+{LP} { yylval=buildAST("LP",0,yylineno);my_debug("LP",yylineno); return LP;  }
+{RP} { yylval=buildAST("RP",0,yylineno);my_debug("RP",yylineno); return RP;  }
+{LB} { yylval=buildAST("LB",0,yylineno);my_debug("LB",yylineno); return LB;  }
+{RB} { yylval=buildAST("RB",0,yylineno);my_debug("RB",yylineno); return RB;  }
+{LC} { yylval=buildAST("LC",0,yylineno);my_debug("LC",yylineno); return LC;  }
+{RC} { yylval=buildAST("RC",0,yylineno);my_debug("RC",yylineno); return RC;  }
+{INT} { yylval=buildAST("INT",0,yylineno);my_debug("INT",yylineno);  return INT;  }
+{FLOAT} { yylval=buildAST("FLOAT",0,yylineno);my_debug("FLOAT",yylineno); ; return FLOAT; }
+{ID} { yylval=buildAST("ID",0,yylineno);my_debug("ID",yylineno);  return ID;  }
 {WS} { }
 \n { yycolumn = 1; yylineno++;}
 . {printf("Error type A at Line %d: Mysterious character \"%s\"\n", yylineno, yytext);}

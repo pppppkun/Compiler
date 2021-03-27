@@ -1,5 +1,5 @@
 #include "main.h"
-
+int nums = 16;
 void my_debug(char *str, int line)
 {
     if (DEBUG)
@@ -56,6 +56,20 @@ int buildAST(char *name, int childSum, ...)
     }
     va_end(child);
     nodes[nodes_point++] = node;
+    if(nodes_point > nums / 2){
+        nums = nums * 2;
+        ASTNode* nnodes = (ASTNode *)malloc(sizeof(ASTNode) * nums);
+        // nodes = (ASTNode *)memcpy(nnodes, nodes, (nodes_point-1) * sizeof(ASTNode));
+        for(int i = 0;i<nodes_point;i++){
+            nnodes[i] = nodes[i];
+        }
+        free(nodes);
+        nodes = nnodes;
+        // printf("%d %d\n",nodes, nnodes);
+        // for(int i = 0;i<nodes_point;i++){
+        //     printf("%s %s \n", nodes[i].name, nodes[i].value);
+        // }
+    }
     return nodes_point - 1;
 }
 
@@ -107,7 +121,7 @@ int print_AST(int now, int space)
 int main(int argc, char **argv)
 {
     AST_PRINT_FLAG = 1;
-    nodes = (ASTNode *)malloc(sizeof(ASTNode) * 100000);
+    nodes = (ASTNode *)malloc(sizeof(ASTNode) * nums);
     // int index = buildAST("EPSILON", -1);
     // printf("%s %d", nodes[index].name, nodes[index].lineno);
     if (argc <= 1)

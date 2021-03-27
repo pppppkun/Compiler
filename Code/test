@@ -1,21 +1,18 @@
-/***comment
-still
-*/
-/* ////\\asfdlkajhsldf\\\\<>@#$
-*/
-int main() //a function
+struct Student
 {
-    float h, s; int i;
-    h = s = 100 //;
-    h = h / 2; // first
-    i = 2;
-    /* a new comment*/
-    while (i <= 10) //\\\//\\/*
+    int SID;
+    int age;
+    struct Teacher
     {
-        s = s + 2 * h;
-        h = h / 2 /*\/\/\/\/\*\/\/\\****\/*/;
-        i = i + 1;
-    }
-    return 0;
+        int TID;
+    } t;
+};
+
+int main()
+{
+    struct Student s1;
+    s1.SID = 1;
+    s1.age = 18;
+    s1.t.TID = 3;
+    return s1;
 }
-/**end ~??

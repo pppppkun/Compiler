@@ -94,7 +94,7 @@ Stmt : Exp SEMI {$$=buildAST("Stmt",2,$1,$2);}
     | IF LP Exp RP Stmt ELSE error
     | WHILE LP error RP Stmt
     | error SEMI {yyerrok;}
-    // | Exp error
+    | Exp error
     ;
 
 /* Local Definitions */

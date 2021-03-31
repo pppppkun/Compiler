@@ -85,7 +85,7 @@ Stmt : Exp SEMI {$$=buildAST("Stmt",2,$1,$2);}
     | IF LP Exp RP Stmt %prec LOWER_THAN_ELSE {$$=buildAST("Stmt",5,$1,$2,$3,$4,$5);}
     | IF LP Exp RP Stmt ELSE Stmt {$$=buildAST("Stmt",7,$1,$2,$3,$4,$5,$6,$7);}
     | WHILE LP Exp RP Stmt {$$=buildAST("Stmt",5,$1,$2,$3,$4,$5);}
-    | RETURN error SEMI
+    | RETURN error SEMI {yyerrok;}
     | IF LP error RP Stmt %prec LOWER_THAN_ELSE
     | IF LP Exp RP error %prec LOWER_THAN_ELSE
     | IF LP error RP error %prec LOWER_THAN_ELSE
@@ -93,8 +93,8 @@ Stmt : Exp SEMI {$$=buildAST("Stmt",2,$1,$2);}
     | IF LP Exp RP error ELSE Stmt
     | IF LP Exp RP Stmt ELSE error
     | WHILE LP error RP Stmt
-    // | error SEMI
-    | Exp error
+    | error SEMI {yyerrok;}
+    // | Exp error
     ;
 
 /* Local Definitions */
@@ -133,6 +133,7 @@ Exp : Exp ASSIGNOP Exp {$$=buildAST("Exp",3,$1,$2,$3);}
     | ID LP error RP
     | Exp LB error RB
     | Exp ASSIGNOP error
+    // | error ASSIGNOP Exp
     | Exp AND error
     | Exp OR error
     | Exp RELOP error

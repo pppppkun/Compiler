@@ -162,6 +162,6 @@ int yyerror(char* msg){
     AST_PRINT_FLAG = 0;
     //printf("error: %s\n",msg);
     if(yytext[0]=='/') printf("COMMENT ERROR");
-    if(yytext[0]=='\0') yytext = "last charactor";
+    if(yytext[0]=='\0') yytext = "last char";
     printf("Error type B at Line %d: %s near %s\n", yylineno, msg, yytext);
 }

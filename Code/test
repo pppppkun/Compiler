@@ -1,5 +1,32 @@
-int main(){
-    int a;
-    a = 1;
+int d(int a){ int a = 1;
+int c(){}
+struct de
+{
+    int a
+    float b;
+;
 }
-/*askdjklasd
+int main()
+{
+    float a[10][2;
+    int i;
+    while() a=3;
+    while(  a=3;
+    if(*) i=1;
+    if(*) i=1; else i=2;
+    d = c;
+    if(c==*) d=c; else c=*
+    A = (3+);
+    +.happy = 1;
+    happy.. = 2;
+    a[5,3] =1.5;
+    return ;
+    d = c;
+    if(a[1][2]==0) i = 1 else i = 0;
+    while(a>b)
+    {
+        if(a==b)
+            b = 0;
+        else
+    }
+}

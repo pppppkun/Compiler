@@ -33,12 +33,14 @@ ExtDefList : ExtDef ExtDefList  {$$=buildAST("ExtDefList",2,$1,$2);}
 ExtDef : Specifier ExtDecList SEMI {$$=buildAST("ExtDef",3,$1,$2,$3);}
     | Specifier SEMI {$$=buildAST("ExtDef", 2, $1,$2);}
     | Specifier FunDec CompSt {$$=buildAST("ExtDef", 3,$1,$2,$3);}
-    | Specifier error SEMI
-    | Specifier error RC
-    | error SEMI
+    | Specifier error SEMI 
+    | Specifier error RC 
+    | error SEMI 
+    | Specifier error 
     ;
 ExtDecList : VarDec {$$=buildAST("ExtDecList", 1, $1);}
     | VarDec COMMA ExtDecList {$$=buildAST("ExtDecList", 3,$1,$2,$3);}
+    | error COMMA ExtDecList {yyerrok;}
     ;
 
 /* Specifiers */
@@ -102,7 +104,8 @@ DefList : Def DefList {$$=buildAST("DefList",2,$1,$2);}
     | {$$=buildAST("DefList", -1);}
     ;
 Def : Specifier DecList SEMI {$$=buildAST("Def",3,$1,$2,$3);}
-    | Specifier error SEMI 
+    | Specifier error SEMI {yyerrok;}
+    | Specifier error
     ;
 DecList : Dec {$$=buildAST("DecList",1,$1);}
     | Dec COMMA DecList {$$=buildAST("DecList",3,$1,$2,$3);}

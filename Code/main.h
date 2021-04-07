@@ -1,7 +1,4 @@
-#include <stdio.h>
-#include <stdarg.h>
-#include <stdlib.h>
-#include <string.h>
+#include "global.h"
 //extern FILE* yyin;
 /* deal with debug */
 #define DEBUG 0
@@ -21,14 +18,3 @@ void my_debug(char *str,int line);
 /* deal with AST */
 int buildAST(char* name, int childSum, ...);
 int print_AST(int now, int space);
-typedef struct ASTNode ASTNode;
-struct ASTNode{
-    char* name;
-    int lineno;
-    char* value;
-    int child;
-    int brother;
-    int type;
-};
-ASTNode* nodes;
-int nodes_point;

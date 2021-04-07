@@ -1,0 +1,25 @@
+#include "global.h"
+
+int semanticAnalyze(int);
+int programAnalyze(int);
+int ExtDefListAnalyze(int);
+int ExtDefAnalyze(int);
+int SpecifierAnalyze(int);
+int ExtDecListAnalyze(int);
+int FunDecAnalyze(int);
+int CompStAnalyze(int);
+int VarDecAnalyze(int);
+int StructAnalyze(int);
+int OptTagAnalyze(int);
+int DefListAnalyze(int);
+int TagAnalyze(int);
+int VarListAnalyze(int);
+int ParamDecAnalyze(int);
+int DefListAnalyze(int);
+int StmtListAnalyze(int);
+int ExpAnalyze(int);
+int StmtAnalyze(int);
+int DefAnalyze(int);
+int DecListAnalyze(int);
+int DecAnalyze(int);
+int ArgsAnalyze(int);

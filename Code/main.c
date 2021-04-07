@@ -1,4 +1,5 @@
 #include "main.h"
+#include "semantic.h"
 int nums = 16;
 void my_debug(char *str, int line)
 {
@@ -22,7 +23,7 @@ int buildAST(char *name, int childSum, ...)
     node.name = malloc(strlen(name));
     strcpy(node.name, name);
     node.lineno = -1;
-    node.type = 0;
+    node.type = 1;
     node.brother = -1;
     node.child = -1;
 
@@ -42,16 +43,18 @@ int buildAST(char *name, int childSum, ...)
             index = nodes[index].brother;
             AST_debug(name, "get child", nodes[index].name);
         }
+        node.type = va_arg(child, int);
     }
     else if (childSum == 0)
     {
         node.lineno = va_arg(child, int);
         node.value = malloc(strlen(yytext));
         strcpy(node.value, yytext);
-        node.type = 1;
+        node.type = 0;
     }
     else
     {
+        node.type=-1;
         // printf("// %s %d//\n", node.name, node.lineno);
     }
     va_end(child);
@@ -59,16 +62,11 @@ int buildAST(char *name, int childSum, ...)
     if(nodes_point > nums / 2){
         nums = nums * 2;
         ASTNode* nnodes = (ASTNode *)malloc(sizeof(ASTNode) * nums);
-        // nodes = (ASTNode *)memcpy(nnodes, nodes, (nodes_point-1) * sizeof(ASTNode));
         for(int i = 0;i<nodes_point;i++){
             nnodes[i] = nodes[i];
         }
         free(nodes);
         nodes = nnodes;
-        // printf("%d %d\n",nodes, nnodes);
-        // for(int i = 0;i<nodes_point;i++){
-        //     printf("%s %s \n", nodes[i].name, nodes[i].value);
-        // }
     }
     return nodes_point - 1;
 }
@@ -79,12 +77,12 @@ int print_AST(int now, int space)
     if (now < 0)
         return 0;
     ASTNode node = nodes[now];
-    if (node.lineno != -1)
+    if (node.type != -1)
     {
         for (int i = 0; i < space; i++)
             printf("  ");
         // flex
-        if (node.type == 1)
+        if (node.type == 0)
         {
             printf("%s", node.name);
             if (node.name[0] == 'I' && node.name[1] == 'D')
@@ -137,5 +135,6 @@ int main(int argc, char **argv)
     yyparse();
     if (AST_PRINT_FLAG)
         print_AST(nodes_point - 1, 0);
+    semanticAnalyze(nodes_point-1);
     return 0;
 }

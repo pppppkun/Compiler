@@ -1,6 +1,12 @@
 int fun(int a, int b, int c);
 float a(float a, int a);
 
+struct A {
+  int a;
+  int b;
+  int c;
+};
+
 int main(){
   int b = 0;
 

@@ -14,10 +14,26 @@
 #define StructSpecifier_STRUCTTag 2
 #define OptTag_ID 1
 #define Tag_ID 1
+#define DefList_DefDefList 1
+#define Def_SpecifierDecListSEMI 1
+#define DecList_Dec 1
+#define DecList_DecCOMMADecList 2
+#define Dec_VarDec 1
+#define Dec_VarDecASSIGNOP_Exp 2
 #define VarDec_ID 1
 #define VarDec_LBINTRB 2
 #define FunDec_IDLPVarListRP 1
 #define FunDec_IDLPRP 2
+#define VarList_ParamDecCOMMAVarList 1
+#define VarList_ParamDec 2
+#define ParamDec_SpecifierVarDec 1
+#define StmtList_StmtStmtList 1
+#define Stmt_ExpSEMI 1
+#define Stmt_CompSt 2
+#define Stmt_RETURNExpSEMI 3
+#define Stmt_IFLPExpRPStmt 4
+#define Stmt_IFLPExpRPStmtELSEStmt 5
+#define Stmt_WHILELPExpRPStmt 6
 #define ANONYMITY "!@#$"
 
 typedef struct Type Type;
@@ -48,7 +64,7 @@ struct Type{
         struct{
             Type* type;
             int size;
-        } array;
+        }* array;
         Field* field;
     };
 };
@@ -62,7 +78,7 @@ struct Field{
 enum SymbolKind {
     VAR,
     FIELD,
-    STRUCTURE,
+    STRUCT,
     FUNCION
 };
 
@@ -70,33 +86,32 @@ struct Symbol
 {
     SymbolKind kind;
     char* name;
-    Type type;
+    Type* type;
     int hashcode;
     Symbol* next;
 };
 
-Symbol* symbolTable;
+Symbol** symbol_table;
 
 int semanticAnalyze(int);
 int ProgramAnalyze(int);
 int ExtDefListAnalyze(int);
 int ExtDefAnalyze(int);
-Type SpecifierAnalyze(int);
+int SpecifierAnalyze(int, Type*);
 int ExtDecListAnalyze(int);
 int FunDecAnalyze(int);
 int CompStAnalyze(int);
 int VarDecAnalyze(int);
-int StructAnalyze(int);
+int StructAnalyze(int, Type*);
 char* OptTagAnalyze(int);
-int DefListAnalyze(int);
-int TagAnalyze(int);
+int DefListAnalyze(int, Field*, SymbolKind);
+int DefAnalyze(int, Field*, SymbolKind);
+char* TagAnalyze(int);
 int VarListAnalyze(int);
 int ParamDecAnalyze(int);
-int DefListAnalyze(int);
 int StmtListAnalyze(int);
 int ExpAnalyze(int);
 int StmtAnalyze(int);
-int DefAnalyze(int);
 int DecListAnalyze(int);
 int DecAnalyze(int);
 int ArgsAnalyze(int);

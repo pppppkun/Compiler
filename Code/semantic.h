@@ -34,7 +34,7 @@
 #define Stmt_IFLPExpRPStmt 4
 #define Stmt_IFLPExpRPStmtELSEStmt 5
 #define Stmt_WHILELPExpRPStmt 6
-#define ANONYMITY "!@#$"
+#define ANONYMITY "!@#$^&&**&*&*&*&*&*&*&*&"
 
 typedef struct Type Type;
 typedef struct Field Field;
@@ -101,7 +101,7 @@ int SpecifierAnalyze(int, Type*);
 int ExtDecListAnalyze(int);
 int FunDecAnalyze(int);
 int CompStAnalyze(int);
-int VarDecAnalyze(int);
+int VarDecAnalyze(int, Type*, SymbolKind);
 int StructAnalyze(int, Type*);
 char* OptTagAnalyze(int);
 int DefListAnalyze(int, Field*, SymbolKind);
@@ -112,6 +112,6 @@ int ParamDecAnalyze(int);
 int StmtListAnalyze(int);
 int ExpAnalyze(int);
 int StmtAnalyze(int);
-int DecListAnalyze(int);
-int DecAnalyze(int);
+int DecListAnalyze(int, Type*, SymbolKind);
+int DecAnalyze(int, Type*, SymbolKind);
 int ArgsAnalyze(int);

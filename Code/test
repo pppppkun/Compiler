@@ -1,14 +1,7 @@
-int fun(int a, int b, int c);
-
-float a(float a, int a);
-
 struct A {
-  int a;
-  int b;
+  int a,b,c;
   int c;
 };
-
-struct A a;
 
 int main(){
   int b = 0;

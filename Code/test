@@ -1,8 +1,8 @@
-struct A {
+struct A{
   int a,b,c;
-  int c;
+  float d,c,f,z;
 };
 
 int main(){
-  int b = 0;
+  return get_id(x);
 }

@@ -24,8 +24,8 @@ unsigned int hash_pjw(char *name)
     for (; *name; ++name)
     {
         val = (val << 2) + *name;
-        if (i = val & ~(nodes_point-1))
-            val = (val ^ (i >> 12)) & (nodes_point-1);
+        if (i = val & ~(nodes_point - 1))
+            val = (val ^ (i >> 12)) & (nodes_point - 1);
     }
     return val;
 }
@@ -41,12 +41,6 @@ int *GetSon(ASTNode node)
         sons[index++] = child.brother;
         child = nodes[sons[index - 1]];
     }
-    // sons[index++] = nodes[node.child];
-    // ASTNode child = sons[index-1];
-    // while(child.brother!=-1){
-    //     sons[index++] = nodes[child.brother];
-    //     child = sons[index-1];
-    // }
     return sons;
 }
 
@@ -54,7 +48,6 @@ int SymbolInsert(Symbol *symbol)
 {
     char *name = symbol->name;
     unsigned int index = hash_pjw(name);
-    printf("%d\n", index);
     symbol->hashcode = index;
     // first insert
     if (symbol_table[index]->hashcode == -1)
@@ -70,6 +63,7 @@ int SymbolInsert(Symbol *symbol)
         }
         node->next = symbol;
     }
+    return index;
     //TODO
 }
 
@@ -77,7 +71,6 @@ int SymbolContains(char *name, SymbolKind kind)
 {
     unsigned int index = hash_pjw(name);
     Symbol *symbol = symbol_table[index];
-    printf("get symbol in contains %d\n", index);
     if (symbol->hashcode == -1)
         return 0;
     while (symbol != NULL)
@@ -91,7 +84,7 @@ int SymbolContains(char *name, SymbolKind kind)
                     return 1;
                 break;
             case FIELD:
-                if (kind == FIELD)
+                if (kind == STRUCT)
                     return 1;
                 break;
             case STRUCT:
@@ -104,7 +97,7 @@ int SymbolContains(char *name, SymbolKind kind)
                 break;
             }
         }
-        symbol=symbol->next;
+        symbol = symbol->next;
     }
     return 0;
 }
@@ -154,9 +147,7 @@ int ExtDefListAnalyze(int index)
         ExtDefAnalyze(ext_def);
         ExtDefListAnalyze(ext_def_list);
     }
-    else
-    {
-    }
+    else return -1;
     return 0;
 }
 
@@ -176,13 +167,10 @@ int ExtDefAnalyze(int index)
         SpecifierAnalyze(child, type);
         break;
     case ExtDef_SpecifierFunDecSEMI:
-    {
         SpecifierAnalyze(child, type);
         type->value = RIGHT;
         FunDecAnalyze(child_node.brother);
         break;
-    }
-        // childNode = nodes[childNode.brother];
     case ExtDef_SpecifierFunDecCompSt:
         break;
     default:
@@ -244,6 +232,11 @@ int StructAnalyze(int index, Type *type)
             Field *field = malloc(sizeof(Field));
             type->field = field;
             DefListAnalyze(sons[3], field, STRUCT);
+            while (field != NULL)
+            {
+                printf("%s ", field->name);
+                field = field->next;
+            }
             SymbolInsert(symbol);
         }
         break;
@@ -271,19 +264,25 @@ int StructAnalyze(int index, Type *type)
 int DefListAnalyze(int index, Field *field, SymbolKind kind)
 {
     ASTNode def_list = nodes[index];
-    int *sons = GetSon(def_list);
     DebugPrintNameType(def_list);
-    Field *field_def = malloc(sizeof(Field));
-    field->next = field_def;
-    switch (def_list.type)
-    {
-    case DefList_DefDefList:
-        DefAnalyze(sons[0], field_def, kind);
-        DefListAnalyze(sons[1], field_def, kind);
-        break;
-    default:
-        break;
+    if(def_list.type==DefList_DefDefList){
+        int *sons = GetSon(def_list);
+        Field *field_ = malloc(sizeof(Field));
+        DefAnalyze(sons[0], field, kind);
+        int ret = DefListAnalyze(sons[1], field_, kind);
+        if(kind == STRUCT){
+            if(ret == -1) {
+                free(field_);
+                return 0;
+            }
+            if(ret == 0) {
+                while(field->next != NULL) field = field->next;
+                field->next = field_;
+            }
+        }
     }
+    else return -1;
+    return 0;
 }
 
 int DefAnalyze(int index, Field *field, SymbolKind kind)
@@ -298,11 +297,7 @@ int DefAnalyze(int index, Field *field, SymbolKind kind)
     case VAR:
         break;
     case STRUCT:
-        // field = malloc(sizeof(Field));
-        type->field = field;
-        DecListAnalyze(sons[1], type, kind);
-        field->type = type;
-        type->field = NULL;
+        DecListAnalyze(sons[1], type, field, kind);
         break;
     default:
         break;
@@ -315,7 +310,7 @@ int FunDecAnalyze(int index)
     ASTNode fun_dec = nodes[index];
 }
 
-int DecListAnalyze(int index, Type *type, SymbolKind kind)
+int DecListAnalyze(int index, Type *type, Field *field, SymbolKind kind)
 {
     ASTNode dec_list = nodes[index];
     DebugPrintNameType(dec_list);
@@ -324,17 +319,22 @@ int DecListAnalyze(int index, Type *type, SymbolKind kind)
     switch (dec_list.type)
     {
     case DecList_Dec:
-        DecAnalyze(sons[0], type, kind);
+        DecAnalyze(sons[0], type, field, kind);
         break;
     case DecList_DecCOMMADecList:
-        DecAnalyze(sons[0], type, kind);
-        DecListAnalyze(sons[2], type, kind);
+    {
+        DecAnalyze(sons[0], type, field, kind);
+        Field* field_ = malloc(sizeof(Field));
+        DecListAnalyze(sons[2], type, field_, kind);
+        field->next = field_;
+        break;
+    }
     default:
         break;
     }
 }
 
-int DecAnalyze(int index, Type *type, SymbolKind kind)
+int DecAnalyze(int index, Type *type, Field *field, SymbolKind kind)
 {
     ASTNode dec = nodes[index];
     DebugPrintNameType(dec);
@@ -343,7 +343,7 @@ int DecAnalyze(int index, Type *type, SymbolKind kind)
     switch (dec.type)
     {
     case Dec_VarDec:
-        VarDecAnalyze(sons[0], type, kind);
+        VarDecAnalyze(sons[0], type, field, kind);
         break;
     case Dec_VarDecASSIGNOP_Exp:
         if (kind == STRUCT)
@@ -356,7 +356,7 @@ int DecAnalyze(int index, Type *type, SymbolKind kind)
     }
 }
 
-int VarDecAnalyze(int index, Type *type, SymbolKind kind)
+int VarDecAnalyze(int index, Type *type, Field *field, SymbolKind kind)
 {
     ASTNode var_dec = nodes[index];
     DebugPrintNameType(var_dec);
@@ -377,8 +377,8 @@ int VarDecAnalyze(int index, Type *type, SymbolKind kind)
             else
             {
                 Symbol *symbol = malloc(sizeof(Symbol));
-                symbol->name=name;
-                symbol->next=NULL;
+                symbol->name = name;
+                symbol->next = NULL;
                 if (kind == VAR)
                 {
                     symbol->name = name;
@@ -388,21 +388,13 @@ int VarDecAnalyze(int index, Type *type, SymbolKind kind)
                 }
                 if (kind == STRUCT)
                 {
-                    Field *field = type->field;
-                    type->field = NULL;
                     field->type = type;
                     field->name = name;
-                    field->next = malloc(sizeof(Field));
-                    symbol->kind=FIELD;
-                    symbol->name=name;
-                    symbol->type= malloc(sizeof(Type));
-                    // symbol->type->kind=type->kind;
-                    // symbol->type->value=LEFT;
-                    // symbol->type->field=field;
-                    type->field = field->next;
+                    field->next = NULL;
+                    symbol->kind = FIELD;
+                    symbol->name = name;
                 }
                 SymbolInsert(symbol);
-                printf("INSERT SUCCESS!\n");
             }
             break;
         }

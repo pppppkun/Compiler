@@ -12,9 +12,9 @@ void DebugPrintNameValue(ASTNode node)
         printf("%s %s\n", node.name, node.value);
 }
 
-void SemanticError(int typeno, int lineno, char *reason)
+void SemanticError(int typeno, int lineno, char *reason, char *addition)
 {
-    printf("Error type %d at Line %d: %s\n", typeno, lineno, reason);
+    printf("Error type %d at Line %d: %s about %s\n", typeno, lineno, reason, addition);
     //Error type 1 at Line 4: Undefined variable "j".
 }
 
@@ -84,7 +84,7 @@ int SymbolContains(char *name, SymbolKind kind)
                     return 1;
                 break;
             case FIELD:
-                if (kind == STRUCT)
+                if (kind == STRUCT || kind == VAR)
                     return 1;
                 break;
             case STRUCT:
@@ -92,6 +92,8 @@ int SymbolContains(char *name, SymbolKind kind)
                     return 1;
                 break;
             case FUNCION:
+                if (kind == FUNCION)
+                    return 1;
                 break;
             default:
                 break;
@@ -147,7 +149,8 @@ int ExtDefListAnalyze(int index)
         ExtDefAnalyze(ext_def);
         ExtDefListAnalyze(ext_def_list);
     }
-    else return -1;
+    else
+        return -1;
     return 0;
 }
 
@@ -155,24 +158,105 @@ int ExtDefAnalyze(int index)
 {
     ASTNode ext_def_node = nodes[index];
     DebugPrintNameType(ext_def_node);
-    int child = ext_def_node.child;
-    ASTNode child_node = nodes[child];
+    // int child = ext_def_node.child;
+    int *sons = GetSon(ext_def_node);
+    ASTNode child_node = nodes[sons[0]];
     Type *type = malloc(sizeof(Type));
     switch (ext_def_node.type)
     {
     case ExtDef_SpecifierExtDecListSEMI:
-        SpecifierAnalyze(child, type);
+        SpecifierAnalyze(sons[0], type);
+        ExtDecListAnalyze(sons[1], type);
         break;
     case ExtDef_SpecifierSEMI:
-        SpecifierAnalyze(child, type);
+        SpecifierAnalyze(sons[0], type);
         break;
     case ExtDef_SpecifierFunDecSEMI:
-        SpecifierAnalyze(child, type);
+        SpecifierAnalyze(sons[0], type);
         type->value = RIGHT;
-        FunDecAnalyze(child_node.brother);
+        FunDecAnalyze(sons[1]);
         break;
     case ExtDef_SpecifierFunDecCompSt:
         break;
+    default:
+        break;
+    }
+}
+
+//TODO
+int FunDecAnalyze(int index)
+{
+    ASTNode fun_dec = nodes[index];
+    DebugPrintNameType(fun_dec);
+    int *sons = GetSon(fun_dec);
+    char *name = nodes[sons[0]].value;
+    if (SymbolContains(name, FUNCION) == 1)
+    {
+        SemanticError(4, fun_dec.lineno, "Redefined function", name);
+        return 0;
+    }
+    Symbol *symbol = malloc(sizeof(Symbol));
+    symbol->kind = FUNCION;
+    symbol->name = name;
+    symbol->next = NULL;
+    switch (fun_dec.type)
+    {
+    case FunDec_IDLPVarListRP:
+        VarListAnalyze(sons[2]);
+        break;
+    case FunDec_IDLPRP:
+        SymbolInsert(symbol);
+        break;
+    default:
+        break;
+    }
+}
+
+int VarListAnalyze(int index)
+{
+    ASTNode var_list = nodes[index];
+    DebugPrintNameType(var_list);
+    int *sons = GetSon(var_list);
+    switch (var_list.type)
+    {
+    case VarList_ParamDecCOMMAVarList:
+        ParamDecAnalyze(sons[0]);
+        VarListAnalyze(sons[2]);
+        break;
+    case VarList_ParamDec:
+        ParamDecAnalyze(sons[0]);
+        break;
+    default:
+        break;
+    }
+}
+
+int ParamDecAnalyze(int index)
+{
+    ASTNode param_dec = nodes[index];
+    DebugPrintNameType(param_dec);
+    int *sons = GetSon(param_dec);
+    Type *type = malloc(sizeof(Type));
+    SpecifierAnalyze(sons[0], type);
+    VarDecAnalyze(sons[1], type, NULL, VAR);
+}
+
+int ExtDecListAnalyze(int index, Type *type)
+{
+    ASTNode ext_dec_list = nodes[index];
+    DebugPrintNameType(ext_dec_list);
+    int *sons = GetSon(ext_dec_list);
+    switch (ext_dec_list.type)
+    {
+    case ExtDecList_VarDec:
+        VarDecAnalyze(sons[0], type, NULL, VAR);
+        break;
+    case ExtDecList_VarDecCOMMAExtDecList:
+    {
+        VarDecAnalyze(sons[0], type, NULL, VAR);
+        ExtDecListAnalyze(sons[2], type);
+        break;
+    }
     default:
         break;
     }
@@ -220,7 +304,7 @@ int StructAnalyze(int index, Type *type)
         type->value = LEFT;
         if (SymbolContains(name, STRUCT))
         {
-            SemanticError(16, struct_.lineno, "duplicate with the name of a structure or variable");
+            SemanticError(16, struct_.lineno, "Duplicated name", name);
         }
         else
         {
@@ -246,13 +330,15 @@ int StructAnalyze(int index, Type *type)
         char *name = TagAnalyze(sons[1]);
         if (SymbolContains(name, STRUCT) == 0)
         {
-            SemanticError(17, struct_.lineno, "using structure to def var before declare");
+            SemanticError(17, struct_.lineno, "using structure to def var before declare", "");
         }
         else
         {
+            //TODO need add other var into symbol_table
             Symbol *symbol = SymbolGet(name, STRUCT);
-            type = symbol->type;
-            // printf("%s %d\n", symbol->name, type->kind);
+            type->kind = symbol->type->kind;
+            type->value = symbol->type->value;
+            type->field = symbol->type->field;
             return 1;
         }
     }
@@ -265,23 +351,29 @@ int DefListAnalyze(int index, Field *field, SymbolKind kind)
 {
     ASTNode def_list = nodes[index];
     DebugPrintNameType(def_list);
-    if(def_list.type==DefList_DefDefList){
+    if (def_list.type == DefList_DefDefList)
+    {
         int *sons = GetSon(def_list);
         Field *field_ = malloc(sizeof(Field));
         DefAnalyze(sons[0], field, kind);
         int ret = DefListAnalyze(sons[1], field_, kind);
-        if(kind == STRUCT){
-            if(ret == -1) {
+        if (kind == STRUCT)
+        {
+            if (ret == -1)
+            {
                 free(field_);
                 return 0;
             }
-            if(ret == 0) {
-                while(field->next != NULL) field = field->next;
+            if (ret == 0)
+            {
+                while (field->next != NULL)
+                    field = field->next;
                 field->next = field_;
             }
         }
     }
-    else return -1;
+    else
+        return -1;
     return 0;
 }
 
@@ -305,11 +397,6 @@ int DefAnalyze(int index, Field *field, SymbolKind kind)
     // printf("%d\n", type->kind);
 }
 
-int FunDecAnalyze(int index)
-{
-    ASTNode fun_dec = nodes[index];
-}
-
 int DecListAnalyze(int index, Type *type, Field *field, SymbolKind kind)
 {
     ASTNode dec_list = nodes[index];
@@ -324,7 +411,7 @@ int DecListAnalyze(int index, Type *type, Field *field, SymbolKind kind)
     case DecList_DecCOMMADecList:
     {
         DecAnalyze(sons[0], type, field, kind);
-        Field* field_ = malloc(sizeof(Field));
+        Field *field_ = malloc(sizeof(Field));
         DecListAnalyze(sons[2], type, field_, kind);
         field->next = field_;
         break;
@@ -346,11 +433,15 @@ int DecAnalyze(int index, Type *type, Field *field, SymbolKind kind)
         VarDecAnalyze(sons[0], type, field, kind);
         break;
     case Dec_VarDecASSIGNOP_Exp:
+    {
+        ASTNode var_dec = nodes[sons[0]];
+        char *name = nodes[var_dec.child].value;
         if (kind == STRUCT)
         {
-            SemanticError(15, dec.lineno, "Initializes on the field of the structure");
+            SemanticError(15, dec.lineno, "Initializes on the field of the structure about", name);
         }
         break;
+    }
     default:
         break;
     }
@@ -370,9 +461,9 @@ int VarDecAnalyze(int index, Type *type, Field *field, SymbolKind kind)
             if (SymbolContains(name, kind) == 1)
             {
                 if (kind == VAR)
-                    SemanticError(3, var_dec.lineno, "Redefine Variable");
+                    SemanticError(3, var_dec.lineno, "Redefine Variable", name);
                 if (kind == STRUCT)
-                    SemanticError(15, var_dec.lineno, "Redefine Field");
+                    SemanticError(15, var_dec.lineno, "Redefine Field", name);
             }
             else
             {

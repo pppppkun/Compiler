@@ -39,6 +39,7 @@
 typedef struct Type Type;
 typedef struct Field Field;
 typedef struct Symbol Symbol;
+typedef struct FunParam FunParam;
 typedef enum TypeKind TypeKind;
 typedef enum TypeValue TypeValue;
 typedef enum BasicType BasicType;
@@ -55,6 +56,14 @@ enum TypeValue{
 enum BasicType{
     INT,FLOAT
 };
+
+struct FunParam
+{
+    /* data */
+    Type* type;
+    FunParam* fun_param;
+};
+
 
 struct Type{
     TypeKind kind;
@@ -98,7 +107,7 @@ int ProgramAnalyze(int);
 int ExtDefListAnalyze(int);
 int ExtDefAnalyze(int);
 int SpecifierAnalyze(int, Type*);
-int ExtDecListAnalyze(int);
+int ExtDecListAnalyze(int, Type*);
 int FunDecAnalyze(int);
 int CompStAnalyze(int);
 int VarDecAnalyze(int, Type*, Field*, SymbolKind);

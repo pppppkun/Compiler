@@ -135,7 +135,7 @@ int main(int argc, char **argv)
     yyparse();
     if (AST_PRINT_FLAG)
     {
-        print_AST(nodes_point - 1, 0);
+        //print_AST(nodes_point - 1, 0);
         semanticAnalyze(nodes_point-1);
     }
     return 0;

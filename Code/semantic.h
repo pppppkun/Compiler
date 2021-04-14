@@ -1,6 +1,6 @@
 #include "global.h"
 
-#define SEMANTIC_DEBUG 1
+#define SEMANTIC_DEBUG 0
 #define ExtDefList_ExtDefExtDefList 1
 #define ExtDef_SpecifierExtDecListSEMI 1
 #define ExtDef_SpecifierSEMI 2
@@ -52,29 +52,28 @@
 #define Exp_Id 16
 #define Exp_Int 17
 #define Exp_Float 18
-    // | Exp AND Exp {$$=buildAST("Exp",3,$1,$2,$3,2);}
-    // | Exp OR Exp {$$=buildAST("Exp",3,$1,$2,$3,3);}
-    // | Exp RELOP Exp {$$=buildAST("Exp",3,$1,$2,$3,4);}
-    // | Exp PLUS Exp {$$=buildAST("Exp",3,$1,$2,$3,5);}
-    // | Exp MINUS Exp {$$=buildAST("Exp",3,$1,$2,$3,6);}
-    // | Exp STAR Exp {$$=buildAST("Exp",3,$1,$2,$3,7);}
-    // | Exp DIV Exp {$$=buildAST("Exp",3,$1,$2,$3,8);}
-    // | LP Exp RP {$$=buildAST("Exp",3,$1,$2,$3,9);}
-    // | MINUS Exp {$$=buildAST("Exp",2,$1,$2,10);}
-    // | NOT Exp {$$=buildAST("Exp",2,$1,$2,11);}
-    // | ID LP Args RP {$$=buildAST("Exp",4,$1,$2,$3,$4,12);}
-    // | ID LP RP {$$=buildAST("Exp",3,$1,$2,$3,13);}
-    // | Exp LB Exp RB {$$=buildAST("Exp",4,$1,$2,$3,$4,14);}
-    // | Exp DOT ID {$$=buildAST("Exp",3,$1,$2,$3,15);}
-    // | ID {$$=buildAST("Exp",1,$1,16);}
-    // | INT {$$=buildAST("Exp",1,$1,17);}
-    // | FLOAT {$$=buildAST("Exp",1,$1,18);}
+// | Exp AND Exp {$$=buildAST("Exp",3,$1,$2,$3,2);}
+// | Exp OR Exp {$$=buildAST("Exp",3,$1,$2,$3,3);}
+// | Exp RELOP Exp {$$=buildAST("Exp",3,$1,$2,$3,4);}
+// | Exp PLUS Exp {$$=buildAST("Exp",3,$1,$2,$3,5);}
+// | Exp MINUS Exp {$$=buildAST("Exp",3,$1,$2,$3,6);}
+// | Exp STAR Exp {$$=buildAST("Exp",3,$1,$2,$3,7);}
+// | Exp DIV Exp {$$=buildAST("Exp",3,$1,$2,$3,8);}
+// | LP Exp RP {$$=buildAST("Exp",3,$1,$2,$3,9);}
+// | MINUS Exp {$$=buildAST("Exp",2,$1,$2,10);}
+// | NOT Exp {$$=buildAST("Exp",2,$1,$2,11);}
+// | ID LP Args RP {$$=buildAST("Exp",4,$1,$2,$3,$4,12);}
+// | ID LP RP {$$=buildAST("Exp",3,$1,$2,$3,13);}
+// | Exp LB Exp RB {$$=buildAST("Exp",4,$1,$2,$3,$4,14);}
+// | Exp DOT ID {$$=buildAST("Exp",3,$1,$2,$3,15);}
+// | ID {$$=buildAST("Exp",1,$1,16);}
+// | INT {$$=buildAST("Exp",1,$1,17);}
+// | FLOAT {$$=buildAST("Exp",1,$1,18);}
 #define ANONYMITY "!@#$^&&"
 
 typedef struct Type Type;
 typedef struct Field Field;
 typedef struct Symbol Symbol;
-typedef struct FunParam FunParam;
 typedef struct Array Array;
 typedef enum TypeKind TypeKind;
 typedef enum TypeValue TypeValue;
@@ -101,16 +100,9 @@ enum BasicType
     FLOAT
 };
 
-struct FunParam
-{
-    /* data */
-    Type *type;
-    FunParam *fun_param;
-};
-
 struct Array
 {
-    Type* type;
+    Type *type;
     int size;
 };
 
@@ -121,7 +113,7 @@ struct Type
     union
     {
         BasicType basic;
-        Array* array;
+        Array *array;
         Field *field;
     };
 };
@@ -138,7 +130,8 @@ enum SymbolKind
     VAR,
     FIELD,
     STRUCT,
-    FUNCION
+    FUNCTION,
+    FUNCTION_PARAM
 };
 
 struct Symbol
@@ -153,26 +146,26 @@ struct Symbol
 
 Symbol **symbol_table;
 
-int semanticAnalyze(int);//done
-int ProgramAnalyze(int);//done
-int ExtDefListAnalyze(int);//done
-int ExtDefAnalyze(int);//done
-int SpecifierAnalyze(int, Type *);//done
-int ExtDecListAnalyze(int, Type *);//done
-int FunDecAnalyze(int);//done
-int CompStAnalyze(int);//done
-int VarDecAnalyze(int, Type *, Field *, SymbolKind);//done
-int StructAnalyze(int, Type *);//done
-char *OptTagAnalyze(int);//done
-int DefListAnalyze(int, Field *, SymbolKind);//done
-int DefAnalyze(int, Field *, SymbolKind);//done
-char *TagAnalyze(int);//done
-int VarListAnalyze(int);//done
-int ParamDecAnalyze(int);//done
-int StmtListAnalyze(int);//done
-Type* ExpAnalyze(int);//done
-int StmtAnalyze(int);//done
-int DecListAnalyze(int, Type *, Field *, SymbolKind);//done
-int DecAnalyze(int, Type *, Field *, SymbolKind);//done
-int ArgsAnalyze(int);//done
+int semanticAnalyze(int);                             //done
+int ProgramAnalyze(int);                              //done
+int ExtDefListAnalyze(int);                           //done
+int ExtDefAnalyze(int);                               //done
+int SpecifierAnalyze(int, Type *);                    //done
+int ExtDecListAnalyze(int, Type *);                   //done
+int FunDecAnalyze(int index, Type *type, TypeKind);   //done
+int CompStAnalyze(int);                               //done
+int VarDecAnalyze(int, Type *, Field *, SymbolKind);  //done
+int StructAnalyze(int, Type *);                       //done
+char *OptTagAnalyze(int);                             //done
+int DefListAnalyze(int, Field *, SymbolKind);         //done
+int DefAnalyze(int, Field *, SymbolKind);             //done
+char *TagAnalyze(int);                                //done
+Field *VarListAnalyze(int);                           //done
+Field *ParamDecAnalyze(int);                          //done
+int StmtListAnalyze(int);                             //done
+Type *ExpAnalyze(int);                                //done
+int StmtAnalyze(int);                                 //done
+int DecListAnalyze(int, Type *, Field *, SymbolKind); //done
+int DecAnalyze(int, Type *, Field *, SymbolKind);     //done
+Field *ArgsAnalyze(int);                              //done
 int IntAnalyze(int);

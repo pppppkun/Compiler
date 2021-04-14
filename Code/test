@@ -1,1 +1,8 @@
-int a[32][31232];
+int main()
+{
+    int a,b,c;
+    int ab=0,bc=1;
+    float abc=-1.123;
+    if(ab == bc) ab = 1;
+    if(abc > 1) ab = 0;
+}

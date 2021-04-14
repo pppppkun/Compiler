@@ -2,19 +2,115 @@
 
 void DebugPrintNameType(ASTNode node)
 {
-    if (SEMANTIC_DEBUG == 1)
+    if (SEMANTIC_DEBUG)
+    {
         printf("%s %d\n", node.name, node.type);
+    }
 }
 
 void DebugPrintNameValue(ASTNode node)
 {
-    if (SEMANTIC_DEBUG == 1)
+    if (SEMANTIC_DEBUG)
+    {
         printf("%s %s\n", node.name, node.value);
+    }
+}
+
+void DebugPrintSymbol()
+{
+    if(!SEMANTIC_DEBUG) return;
+    for (int i = 0; i < nodes_point; i++)
+    {
+        Symbol *symbol = symbol_table[i];
+        if (symbol->hashcode == -1)
+            continue;
+        else
+        {
+            while (symbol != NULL)
+            {
+                char *kind;
+                switch (symbol->kind)
+                {
+                case VAR:
+                    kind = "var";
+                    break;
+                case FIELD:
+                    kind = "field";
+                    break;
+                case STRUCT:
+                    kind = "struct";
+                    break;
+                case FUNCTION:
+                    kind = "function";
+                    break;
+                case FUNCTION_PARAM:
+                    kind = "function param";
+                    break;
+                default:
+                    break;
+                }
+                printf("%s %s\n", kind, symbol->name);
+                if (symbol->kind == STRUCT || (symbol->kind == VAR && symbol->type->kind == STRUCTURE))
+                {
+                    Field *field = symbol->type->field;
+                    while (field != NULL)
+                    {
+                        char *field_kind;
+                        switch (field->type->kind)
+                        {
+                        case BASIC:
+                            if (field->type->basic == INT)
+                                field_kind = "int";
+                            else
+                                field_kind = "float";
+                            break;
+                        case ARRAY:
+                            field_kind = "array";
+                            break;
+                        case STRUCTURE:
+                            field_kind = "structure";
+                            break;
+                        default:
+                            break;
+                        }
+                        printf("\t%s %s %s.%s\n", "field", field_kind, symbol->name, field->name);
+                        if (field->type->kind == ARRAY)
+                        {
+                            Type *type = field->type;
+                            while (type->kind == ARRAY)
+                            {
+                                printf("\t\tarray size is %d\n", type->array->size);
+                                type = type->array->type;
+                            }
+                            printf("\t\tfinal type is %d\n", type->kind);
+                        }
+                        field = field->next;
+                    }
+                }
+                if (symbol->kind == VAR && symbol->type->kind == ARRAY)
+                {
+                    Type *type = symbol->type;
+                    while (type->kind == ARRAY)
+                    {
+                        printf("\tarray size is %d\n", type->array->size);
+                        type = type->array->type;
+                    }
+                    printf("\tfinal type is %d\n", type->kind);
+                }
+                symbol = symbol->next;
+            }
+        }
+    }
 }
 
 void SemanticError(int typeno, int lineno, char *reason, char *addition)
 {
-    printf("Error type %d at Line %d: %s about %s\n", typeno, lineno, reason, addition);
+    printf("Error type %d at Line %d: %s ", typeno, lineno, reason);
+    if(addition!=NULL&&strlen(addition)!=0)
+    {
+        printf("about %s.\n", addition);
+    }
+    else printf(".\n");
     //Error type 1 at Line 4: Undefined variable "j".
 }
 
@@ -73,19 +169,22 @@ int TypeKindJudge(Type *t1, TypeKind kind)
         return 0;
 }
 
-int FuncParamEqual(Field* f1, Field* f2)
+int FuncParamEqual(Field *f1, Field *f2)
 {
-    while(f1!=NULL&&f2!=NULL)
+    while (f1 != NULL && f2 != NULL)
     {
-        if(TypeEqual(f1->type, f2->type)==1)
+        if (TypeEqual(f1->type, f2->type) == 1)
         {
             f1 = f1->next;
             f2 = f2->next;
         }
-        else return 0;
+        else
+            return 0;
     }
-    if(f1==NULL && f2 == NULL) return 1;
-    else return 0;
+    if (f1 == NULL && f2 == NULL)
+        return 1;
+    else
+        return 0;
 }
 
 unsigned int hash_pjw(char *name)
@@ -149,19 +248,19 @@ int SymbolContains(char *name, SymbolKind kind)
             switch (symbol->kind)
             {
             case VAR:
-                if (kind == VAR || kind == STRUCT)
+                if (kind == VAR || kind == FIELD)
                     return 1;
                 break;
             case FIELD:
-                if (kind == STRUCT || kind == VAR)
+                if (kind == FIELD || kind == VAR)
                     return 1;
                 break;
             case STRUCT:
                 if (kind == VAR || kind == STRUCT)
                     return 1;
                 break;
-            case FUNCION:
-                if (kind == FUNCION)
+            case FUNCTION:
+                if (kind == FUNCTION)
                     return 1;
                 break;
             default:
@@ -201,75 +300,7 @@ int ProgramAnalyze(int index)
     ASTNode child = nodes[program.child];
     // printf("%s %s %s\n", child.name, child.value, node.name);
     ExtDefListAnalyze(program.child);
-    for (int i = 0; i < nodes_point; i++)
-    {
-        Symbol *symbol = symbol_table[i];
-        if (symbol->hashcode == -1)
-            continue;
-        else
-        {
-            while (symbol != NULL)
-            {
-                char *kind;
-                switch (symbol->kind)
-                {
-                case VAR:
-                    kind = "var";
-                    break;
-                case FIELD:
-                    kind = "field";
-                    break;
-                case STRUCT:
-                    kind = "struct";
-                    break;
-                case FUNCION:
-                    kind = "function";
-                    break;
-                default:
-                    break;
-                }
-                printf("%s %s\n", kind, symbol->name);
-                if (symbol->kind == STRUCT || (symbol->kind == VAR && symbol->type->kind == STRUCTURE))
-                {
-                    Field *field = symbol->type->field;
-                    while (field != NULL)
-                    {
-                        char *field_kind;
-                        switch (field->type->kind)
-                        {
-                        case BASIC:
-                            if (field->type->basic == INT)
-                                field_kind = "int";
-                            else
-                                field_kind = "float";
-                            break;
-                        case ARRAY:
-                            field_kind = "array";
-                            break;
-                        case STRUCTURE:
-                            field_kind = "structure";
-                            break;
-                        default:
-                            break;
-                        }
-                        printf("\t%s %s %s.%s\n", "field", field_kind, symbol->name, field->name);
-                        field = field->next;
-                    }
-                }
-                if (symbol->kind == VAR && symbol->type->kind == ARRAY)
-                {
-                    Type *type = symbol->type;
-                    while (type->kind == ARRAY)
-                    {
-                        printf("\tarray size is %d\n", type->array->size);
-                        type = type->array->type;
-                    }
-                    printf("\tfinal type is %d\n", type->kind);
-                }
-                symbol = symbol->next;
-            }
-        }
-    }
+    DebugPrintSymbol();
     return 0;
 }
 
@@ -309,12 +340,12 @@ int ExtDefAnalyze(int index)
     case ExtDef_SpecifierFunDecSEMI:
         SpecifierAnalyze(sons[0], type);
         type->value = RIGHT;
-        FunDecAnalyze(sons[1]);
+        FunDecAnalyze(sons[1], type, UNDEF);
         break;
     case ExtDef_SpecifierFunDecCompSt:
         SpecifierAnalyze(sons[0], type);
         type->value = RIGHT;
-        FunDecAnalyze(sons[1]);
+        FunDecAnalyze(sons[1], type, DEF);
         CompStAnalyze(sons[2]);
         break;
     default:
@@ -322,36 +353,51 @@ int ExtDefAnalyze(int index)
     }
 }
 
-int FunDecAnalyze(int index)
+int FunDecAnalyze(int index, Type *type, TypeKind kind)
 {
     ASTNode fun_dec = nodes[index];
     DebugPrintNameType(fun_dec);
     int *sons = GetSon(fun_dec);
     char *name = nodes[sons[0]].value;
-    if (SymbolContains(name, FUNCION) == 1)
+    if (SymbolContains(name, FUNCTION) == 1)
     {
+        //TODO
         SemanticError(4, fun_dec.lineno, "Redefined function", name);
         return 0;
     }
     Symbol *symbol = malloc(sizeof(Symbol));
-    symbol->kind = FUNCION;
+    symbol->kind = FUNCTION;
     symbol->name = name;
     symbol->next = NULL;
+    symbol->type = malloc(sizeof(Type));
+    symbol->type->kind = kind;
     switch (fun_dec.type)
     {
     case FunDec_IDLPVarListRP:
-        //TODO ADD PARAM;
-        VarListAnalyze(sons[2]);
+    {
+        Field *field = VarListAnalyze(sons[2]);
+        Field *field_ = malloc(sizeof(Field));
+        field_->name = "RETURN";
+        field_->type = type;
+        field_->next = field;
+        symbol->type->field = field_;
+        while (field_ != NULL)
+        {
+            printf("%s ", field_->name);
+            field_ = field_->next;
+        }
+        printf("\n");
         break;
+    }
     case FunDec_IDLPRP:
-        SymbolInsert(symbol);
         break;
     default:
         break;
     }
+    SymbolInsert(symbol);
 }
 
-int VarListAnalyze(int index)
+Field *VarListAnalyze(int index)
 {
     ASTNode var_list = nodes[index];
     DebugPrintNameType(var_list);
@@ -359,25 +405,29 @@ int VarListAnalyze(int index)
     switch (var_list.type)
     {
     case VarList_ParamDecCOMMAVarList:
-        ParamDecAnalyze(sons[0]);
-        VarListAnalyze(sons[2]);
-        break;
+    {
+        Field *field = ParamDecAnalyze(sons[0]);
+        Field *field_ = VarListAnalyze(sons[2]);
+        field->next = field_;
+        return field;
+    }
     case VarList_ParamDec:
-        ParamDecAnalyze(sons[0]);
-        break;
+        return ParamDecAnalyze(sons[0]);
     default:
         break;
     }
 }
 
-int ParamDecAnalyze(int index)
+Field *ParamDecAnalyze(int index)
 {
     ASTNode param_dec = nodes[index];
     DebugPrintNameType(param_dec);
     int *sons = GetSon(param_dec);
     Type *type = malloc(sizeof(Type));
     SpecifierAnalyze(sons[0], type);
-    VarDecAnalyze(sons[1], type, NULL, VAR);
+    Field *field = malloc(sizeof(field));
+    VarDecAnalyze(sons[1], type, field, FUNCTION_PARAM);
+    return field;
 }
 
 int CompStAnalyze(int index)
@@ -508,7 +558,7 @@ int StructAnalyze(int index, Type *type)
             symbol->next = NULL;
             Field *field = malloc(sizeof(Field));
             type->field = field;
-            DefListAnalyze(sons[3], field, STRUCT);
+            DefListAnalyze(sons[3], field, FIELD);
             SymbolInsert(symbol);
         }
         break;
@@ -518,7 +568,7 @@ int StructAnalyze(int index, Type *type)
         char *name = TagAnalyze(sons[1]);
         if (SymbolContains(name, STRUCT) == 0)
         {
-            SemanticError(17, struct_.lineno, "using structure to def var before declare", "");
+            SemanticError(17, struct_.lineno, "using structure to def var before declare", NULL);
         }
         else
         {
@@ -542,7 +592,7 @@ int DefListAnalyze(int index, Field *field, SymbolKind kind)
         Field *field_ = malloc(sizeof(Field));
         DefAnalyze(sons[0], field, kind);
         int ret = DefListAnalyze(sons[1], field_, kind);
-        if (kind == STRUCT)
+        if (kind == FIELD)
         {
             if (ret == -1)
             {
@@ -574,7 +624,7 @@ int DefAnalyze(int index, Field *field, SymbolKind kind)
     case VAR:
         DecListAnalyze(sons[1], type, NULL, kind);
         break;
-    case STRUCT:
+    case FIELD:
         DecListAnalyze(sons[1], type, field, kind);
         break;
     default:
@@ -596,7 +646,7 @@ int DecListAnalyze(int index, Type *type, Field *field, SymbolKind kind)
         break;
     case DecList_DecCOMMADecList:
     {
-        if (kind == STRUCT)
+        if (kind == FIELD)
         {
             DecAnalyze(sons[0], type, field, kind);
             Field *field_ = malloc(sizeof(Field));
@@ -630,12 +680,24 @@ int DecAnalyze(int index, Type *type, Field *field, SymbolKind kind)
     {
         ASTNode var_dec = nodes[sons[0]];
         char *name = nodes[var_dec.child].value;
-        if (kind == STRUCT)
+        //TODO ADD VALUE HERE
+        VarDecAnalyze(sons[0], type, field, kind);
+        if (kind == FIELD)
         {
             SemanticError(15, dec.lineno, "Initializes on the field of the structure about", name);
         }
-        //TODO ADD VALUE HERE
-        VarDecAnalyze(sons[0], type, field, kind);
+        if (kind == VAR)
+        {
+            if(type->value==RIGHT)
+            {
+                SemanticError(6, dec.lineno, "The left-hand side of an assignment must be a variable", NULL);
+            }
+            Type* t1 = ExpAnalyze(sons[2]);
+            if(TypeEqual(t1, type)==0)
+            {
+                SemanticError(5, dec.lineno, "Type mismatched for assignment", NULL);
+            }
+        }
         break;
     }
     default:
@@ -657,9 +719,17 @@ int VarDecAnalyze(int index, Type *type, Field *field, SymbolKind kind)
         {
             if (kind == VAR)
                 SemanticError(3, var_dec.lineno, "Redefine Variable", name);
-            if (kind == STRUCT)
+            if (kind == FIELD)
             {
                 SemanticError(15, var_dec.lineno, "Redefine Field", name);
+                field->name = random();
+                field->type = malloc(sizeof(Type));
+                *field->type = *type;
+                field->next = NULL;
+            }
+            if (kind == FUNCTION_PARAM)
+            {
+                SemanticError(3, var_dec.lineno, "Redefine function param", name);
                 field->name = random();
                 field->type = malloc(sizeof(Type));
                 *field->type = *type;
@@ -674,17 +744,17 @@ int VarDecAnalyze(int index, Type *type, Field *field, SymbolKind kind)
             if (kind == VAR)
             {
                 symbol->name = name;
-                symbol->kind = VAR;
+                symbol->kind = kind;
                 symbol->type = type;
                 symbol->next = NULL;
             }
-            if (kind == STRUCT)
+            if (kind == FIELD || kind == FUNCTION_PARAM)
             {
                 field->type = malloc(sizeof(Type));
                 *field->type = *type;
                 field->name = name;
                 field->next = NULL;
-                symbol->kind = FIELD;
+                symbol->kind = kind;
                 symbol->name = name;
             }
             SymbolInsert(symbol);
@@ -719,13 +789,13 @@ Type *ExpAnalyze(int index)
     {
         Type *t1 = ExpAnalyze(sons[0]);
         Type *t2 = ExpAnalyze(sons[2]);
-        if (t1 != NULL && t1->value == LEFT)
+        if (t1 != NULL && t1->value == RIGHT)
         {
-            SemanticError(6, exp.lineno, "The left-hand side of an assignment must be a variable.", "");
+            SemanticError(6, exp.lineno, "The left-hand side of an assignment must be a variable", NULL);
         }
         if (t1 != NULL && t2 != NULL && TypeEqual(t1, t2) != 1)
         {
-            SemanticError(5, exp.lineno, "Type mismatched for assignment.", "");
+            SemanticError(5, exp.lineno, "Type mismatched for assignment", NULL);
         }
         if (t1 != NULL)
             return t1;
@@ -739,9 +809,9 @@ Type *ExpAnalyze(int index)
         Type *t1 = ExpAnalyze(sons[0]);
         Type *t2 = ExpAnalyze(sons[2]);
         if (t1 != NULL && TypeBasicJudge(t1, INT) == 0)
-            SemanticError(7, exp.lineno, "Type mismatched for operands.", "Boolean Exp only support INT");
+            SemanticError(7, exp.lineno, "Type mismatched for operands", "Boolean Exp only support INT");
         if (t2 != NULL && TypeBasicJudge(t2, INT) == 0)
-            SemanticError(7, exp.lineno, "Type mismatched for operands.", "Boolean Exp only support INT");
+            SemanticError(7, exp.lineno, "Type mismatched for operands", "Boolean Exp only support INT");
         Type *type = malloc(sizeof(Type));
         type->kind = BASIC;
         type->value = RIGHT;
@@ -758,9 +828,9 @@ Type *ExpAnalyze(int index)
         if (t1 != NULL && t2 != NULL)
         {
             if (TypeKindJudge(t1, BASIC) == 0 || TypeKindJudge(t2, BASIC) == 0)
-                SemanticError(7, exp.lineno, "Type mismatched for operands.", "Arithmetic Exp only support Basic Type (INT or FLOAT)");
+                SemanticError(7, exp.lineno, "Type mismatched for operands", "Arithmetic Exp only support Basic Type (INT or FLOAT)");
             if (TypeEqual(t1, t2) == 0)
-                SemanticError(7, exp.lineno, "Type mismatched for operands.", "The types on both sides of an arithmetic expression need to be the same");
+                SemanticError(7, exp.lineno, "Type mismatched for operands", "The types on both sides of an arithmetic expression need to be the same");
         }
         if (t1 != NULL)
             return t1;
@@ -773,71 +843,111 @@ Type *ExpAnalyze(int index)
     {
         Type *t1 = ExpAnalyze(sons[1]);
         if (t1 != NULL && TypeKindJudge(t1, BASIC) == 0)
-            SemanticError(7, exp.lineno, "Type mismatched for operands.", "Arithmetic Exp only support Basic Type (INT or FLOAT)");
+            SemanticError(7, exp.lineno, "Type mismatched for operands", "Arithmetic Exp only support Basic Type (INT or FLOAT)");
         return t1;
     }
     case Exp_NotExp:
     {
-        Type* t1 = ExpAnalyze(sons[1]);
-        if(t1!=NULL&&TypeBasicJudge(t1, INT)==0) SemanticError(7, exp.lineno, "Type mismatched for operands.", "Boolean Exp only support INT");
-        Type* type = malloc(sizeof(Type));
-        type->kind=BASIC;
-        type->basic=INT;
-        type->value=RIGHT;
+        Type *t1 = ExpAnalyze(sons[1]);
+        if (t1 != NULL && TypeBasicJudge(t1, INT) == 0)
+            SemanticError(7, exp.lineno, "Type mismatched for operands", "Boolean Exp only support INT");
+        Type *type = malloc(sizeof(Type));
+        type->kind = BASIC;
+        type->basic = INT;
+        type->value = RIGHT;
         return type;
     }
     case Exp_IdLpArgsRp:
     {
-        char* name = nodes[sons[0]].name;
-        Field* func_params = ArgsAnalyze(sons[2]);
-        if(SymbolContains(name, FUNCION)==0) {
-            SemanticError(2, exp.lineno, "Undefined function",name);
+        char *name = nodes[sons[0]].name;
+        Field *func_params = ArgsAnalyze(sons[2]);
+        if (SymbolContains(name, FUNCTION) == 0)
+        {
+            SemanticError(2, exp.lineno, "Undefined function", name);
             return NULL;
         }
-        else{
-            if(SymbolContains(name, VAR) == 1)
+        else
+        {
+            if (SymbolContains(name, VAR) == 1)
             {
-                SemanticError(11, exp.lineno, "Not a function.",name);
+                SemanticError(11, exp.lineno, "Not a function", name);
                 return NULL;
             }
-            Symbol* func = SymbolGet(name, FUNCION);
-            if(FuncParamEqual(func->type->field->next, func_params) == 0) SemanticError(9, exp.lineno, "The number or type of the actual participating parameters does not match during a function call",name);
+            if (SymbolGet(name, FUNCTION)->type->kind == UNDEF)
+            {
+                SemanticError(18, exp.lineno, "This function is declare but not defined", name);
+                return NULL;
+            }
+            Symbol *func = SymbolGet(name, FUNCTION);
+            if (FuncParamEqual(func->type->field->next, func_params) == 0)
+                SemanticError(9, exp.lineno, "The number or type of the actual participating parameters does not match during a function call", name);
             //TODO need fix type
-            return func->type->field->type; 
+            return func->type->field->type;
         }
     }
     case Exp_IdLpRp:
     {
-        char* name = nodes[sons[0]].value;
-        if(SymbolContains(name, FUNCION) == 0){
+        char *name = nodes[sons[0]].value;
+        if (SymbolContains(name, FUNCTION) == 0)
+        {
             SemanticError(2, exp.lineno, "Undefined function", name);
             return NULL;
         }
-        else{
-            if(SymbolContains(name, VAR) == 1)
+        else
+        {
+            if (SymbolContains(name, VAR) == 1)
             {
-                SemanticError(11, exp.lineno, "Not a function.",name);
+                SemanticError(11, exp.lineno, "Not a function", name);
                 return NULL;
             }
-            Symbol* func = SymbolGet(name, FUNCION);
-            if(func->type->field->next != NULL) SemanticError(9, exp.lineno, "The number or type of the actual participating parameters does not match during a function call",name);
+            Symbol *func = SymbolGet(name, FUNCTION);
+            if (func->type->field->next != NULL)
+                SemanticError(9, exp.lineno, "The number or type of the actual participating parameters does not match during a function call", name);
             return func->type->field->type;
         }
     }
     case Exp_ExpLbExpRb:
     {
-        Type* t1 = ExpAnalyze(sons[0]);
-        Type* t2 = ExpAnalyze(sons[2]);
-        if(t1!=NULL&&t1->kind!=ARRAY) 
+        Type *t1 = ExpAnalyze(sons[0]);
+        Type *t2 = ExpAnalyze(sons[2]);
+        if (t1 != NULL && t1->kind != ARRAY)
         {
-            SemanticError(10, exp.lineno, "Not a array.","");
+            SemanticError(10, exp.lineno, "Not a array.", "");
             return NULL;
         }
-        if(t2!=NULL&&TypeBasicJudge(t2, INT)==0)
+        if (t2 != NULL && TypeBasicJudge(t2, INT) == 0)
         {
-            SemanticError(12, exp.lineno, "Only integers can be used as array subscripts.","");
+            SemanticError(12, exp.lineno, "Only integers can be used as array subscripts", NULL);
         }
         return t1->array->type;
+    }
+    case Exp_ExpDotId:
+    {
+        //TODO;
+        return NULL;
+    }
+    case Exp_Id:
+    {
+        char *name = nodes[sons[0]].value;
+        if (SymbolContains(name, VAR) == 0)
+        {
+            SemanticError(1, exp.lineno, "Undefined variable", name);
+            return NULL;
+        }
+        Type *t1 = SymbolGet(name, VAR)->type;
+        return t1;
+    }
+    case Exp_Int:
+    case Exp_Float:
+    {
+        Type *t1 = malloc(sizeof(Type));
+        t1->kind = BASIC;
+        t1->value = RIGHT;
+        if (exp.type == Exp_Int)
+            t1->basic = INT;
+        else
+            t1->basic = FLOAT;
+        return t1;
     }
     default:
         break;
@@ -862,7 +972,7 @@ char *TagAnalyze(int index)
     return nodes[tag.child].value;
 }
 
-int ArgsAnalyze(int index)
+Field *ArgsAnalyze(int index)
 {
     ASTNode args = nodes[index];
     DebugPrintNameType(args);

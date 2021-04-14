@@ -1,7 +1,6 @@
-int func(int a, int b, int c);
+struct A {
+    int a,b,c;
+    int e[3];
+};
 
-int a;
-
-int main(){
-  int g;
-}
+struct A abc[3];

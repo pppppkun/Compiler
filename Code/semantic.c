@@ -18,6 +18,42 @@ void SemanticError(int typeno, int lineno, char *reason, char *addition)
     //Error type 1 at Line 4: Undefined variable "j".
 }
 
+char* random()
+{
+    char* name = malloc(sizeof(char)*10);
+    for(int i = 0;i<10;i++)
+    {
+        int t = rand() % (10+26+26);
+        if(t < 10) name[i] = (char)('0' + t);
+        else if(t < 10 + 26) name[i] = (char)('a' + t - 10);
+        else name[i] = (char)('A' + t - 10 - 26);
+    }
+    return name;
+}
+
+int TypeKindEqual(Type *t1, Type *t2)
+{
+    //TODO
+    if (t1->kind != t2->kind)
+        return 0;
+    switch (t1->kind)
+    {
+    case BASIC:
+        if (t1->basic == t2->basic)
+            return 1;
+        else
+            return 0;
+    case ARRAY:
+        //TODO
+        break;
+    case STRUCTURE:
+        //TODO
+        break;
+    default:
+        break;
+    }
+}
+
 unsigned int hash_pjw(char *name)
 {
     unsigned int val = 0, i;
@@ -130,11 +166,75 @@ int ProgramAnalyze(int index)
     ASTNode program = nodes[index];
     DebugPrintNameType(program);
     ASTNode child = nodes[program.child];
-    do
+    // printf("%s %s %s\n", child.name, child.value, node.name);
+    ExtDefListAnalyze(program.child);
+    for (int i = 0; i < nodes_point; i++)
     {
-        // printf("%s %s %s\n", child.name, child.value, node.name);
-        ExtDefListAnalyze(program.child);
-    } while (child.brother != -1);
+        Symbol *symbol = symbol_table[i];
+        if (symbol->hashcode == -1)
+            continue;
+        else
+        {
+            while (symbol != NULL)
+            {
+                char *kind;
+                switch (symbol->kind)
+                {
+                case VAR:
+                    kind = "var";
+                    break;
+                case FIELD:
+                    kind = "field";
+                    break;
+                case STRUCT:
+                    kind = "struct";
+                    break;
+                case FUNCION:
+                    kind = "function";
+                    break;
+                default:
+                    break;
+                }
+                printf("%s %s\n", kind, symbol->name);
+                if(symbol->kind == STRUCT || (symbol->kind==VAR && symbol->type->kind==STRUCTURE))
+                {
+                    Field* field = symbol->type->field;
+                    while(field!=NULL)
+                    {
+                        char* field_kind;
+                        switch (field->type->kind)
+                        {
+                        case BASIC: 
+                            if(field->type->basic==INT) field_kind = "int";
+                            else field_kind ="float";
+                            break;
+                        case ARRAY:
+                            field_kind = "array";
+                            break;
+                        case STRUCTURE:
+                            field_kind = "structure";
+                            break;
+                        default:
+                            break;
+                        }
+                        printf("\t%s %s %s.%s\n", "field",field_kind , symbol->name,field->name);
+                        field = field->next;
+                    }
+                }
+                if(symbol->kind==VAR && symbol->type->kind==ARRAY)
+                {
+                    Type* type = symbol->type;
+                    while(type->kind == ARRAY)
+                    {
+                        printf("\tarray size is %d\n", type->array->size);
+                        type = type->array->type;
+                    }
+                    printf("\tfinal type is %d\n", type->kind);
+                }
+                symbol = symbol->next;
+            }
+        }
+    }
     return 0;
 }
 
@@ -177,13 +277,16 @@ int ExtDefAnalyze(int index)
         FunDecAnalyze(sons[1]);
         break;
     case ExtDef_SpecifierFunDecCompSt:
+        SpecifierAnalyze(sons[0], type);
+        type->value = RIGHT;
+        FunDecAnalyze(sons[1]);
+        CompStAnalyze(sons[2]);
         break;
     default:
         break;
     }
 }
 
-//TODO
 int FunDecAnalyze(int index)
 {
     ASTNode fun_dec = nodes[index];
@@ -239,6 +342,62 @@ int ParamDecAnalyze(int index)
     Type *type = malloc(sizeof(Type));
     SpecifierAnalyze(sons[0], type);
     VarDecAnalyze(sons[1], type, NULL, VAR);
+}
+
+int CompStAnalyze(int index)
+{
+    ASTNode comp_st = nodes[index];
+    DebugPrintNameType(comp_st);
+    int *sons = GetSon(comp_st);
+    DefListAnalyze(sons[1], NULL, VAR);
+    StmtListAnalyze(sons[2]);
+}
+
+int StmtListAnalyze(int index)
+{
+    ASTNode stmt_list = nodes[index];
+    DebugPrintNameType(stmt_list);
+    if (stmt_list.type == StmtList_StmtStmtList)
+    {
+        int *sons = GetSon(stmt_list);
+        StmtAnalyze(sons[0]);
+        StmtListAnalyze(sons[1]);
+    }
+}
+
+int StmtAnalyze(int index)
+{
+    ASTNode stmt = nodes[index];
+    int *sons = GetSon(stmt);
+    DebugPrintNameType(stmt);
+    switch (stmt.type)
+    {
+    case Stmt_ExpSEMI:
+        ExpAnalyze(sons[0]);
+        break;
+    case Stmt_CompSt:
+        CompStAnalyze(sons[0]);
+    case Stmt_ReturnExpSEMI:
+        ExpAnalyze(sons[1]);
+        break;
+    case Stmt_IfLpExpRpStmt:
+        //todo sons 2
+        ExpAnalyze(sons[2]);
+        StmtAnalyze(sons[4]);
+        break;
+    case Stmt_IfLpExpRpStmtElseStmt:
+        //TODO 2 4 6
+        ExpAnalyze(sons[2]);
+        StmtAnalyze(sons[4]);
+        StmtAnalyze(sons[6]);
+        break;
+    case Stmt_WhileLpExpRpStmt:
+        ExpAnalyze(sons[2]);
+        StmtAnalyze(sons[4]);
+        break;
+    default:
+        break;
+    }
 }
 
 int ExtDecListAnalyze(int index, Type *type)
@@ -316,11 +475,6 @@ int StructAnalyze(int index, Type *type)
             Field *field = malloc(sizeof(Field));
             type->field = field;
             DefListAnalyze(sons[3], field, STRUCT);
-            while (field != NULL)
-            {
-                printf("%s ", field->name);
-                field = field->next;
-            }
             SymbolInsert(symbol);
         }
         break;
@@ -336,9 +490,10 @@ int StructAnalyze(int index, Type *type)
         {
             //TODO need add other var into symbol_table
             Symbol *symbol = SymbolGet(name, STRUCT);
-            type->kind = symbol->type->kind;
-            type->value = symbol->type->value;
-            type->field = symbol->type->field;
+            // type->kind = symbol->type->kind;
+            // type->value = symbol->type->value;
+            // type->field = symbol->type->field;
+            *type = *symbol->type;
             return 1;
         }
     }
@@ -387,6 +542,7 @@ int DefAnalyze(int index, Field *field, SymbolKind kind)
     switch (kind)
     {
     case VAR:
+        DecListAnalyze(sons[1], type, NULL, kind);
         break;
     case STRUCT:
         DecListAnalyze(sons[1], type, field, kind);
@@ -410,11 +566,19 @@ int DecListAnalyze(int index, Type *type, Field *field, SymbolKind kind)
         break;
     case DecList_DecCOMMADecList:
     {
-        DecAnalyze(sons[0], type, field, kind);
-        Field *field_ = malloc(sizeof(Field));
-        DecListAnalyze(sons[2], type, field_, kind);
-        field->next = field_;
-        break;
+        if (kind == STRUCT)
+        {
+            DecAnalyze(sons[0], type, field, kind);
+            Field *field_ = malloc(sizeof(Field));
+            DecListAnalyze(sons[2], type, field_, kind);
+            field->next = field_;
+            break;
+        }
+        if (kind == VAR)
+        {
+            DecAnalyze(sons[0], type, NULL, kind);
+            DecListAnalyze(sons[2], type, NULL, kind);
+        }
     }
     default:
         break;
@@ -432,7 +596,7 @@ int DecAnalyze(int index, Type *type, Field *field, SymbolKind kind)
     case Dec_VarDec:
         VarDecAnalyze(sons[0], type, field, kind);
         break;
-    case Dec_VarDecASSIGNOP_Exp:
+    case Dec_VarDecASSIGNOPExp:
     {
         ASTNode var_dec = nodes[sons[0]];
         char *name = nodes[var_dec.child].value;
@@ -440,6 +604,8 @@ int DecAnalyze(int index, Type *type, Field *field, SymbolKind kind)
         {
             SemanticError(15, dec.lineno, "Initializes on the field of the structure about", name);
         }
+        //TODO ADD VALUE HERE
+        VarDecAnalyze(sons[0], type, field, kind);
         break;
     }
     default:
@@ -455,42 +621,89 @@ int VarDecAnalyze(int index, Type *type, Field *field, SymbolKind kind)
     switch (var_dec.type)
     {
     case VarDec_ID:
-        // printf("%s \n",nodes[sons[0]].value);
+    {
+        char *name = nodes[sons[0]].value;
+        if (SymbolContains(name, kind) == 1)
         {
-            char *name = nodes[sons[0]].value;
-            if (SymbolContains(name, kind) == 1)
-            {
-                if (kind == VAR)
-                    SemanticError(3, var_dec.lineno, "Redefine Variable", name);
-                if (kind == STRUCT)
+            if (kind == VAR)
+                SemanticError(3, var_dec.lineno, "Redefine Variable", name);
+            if (kind == STRUCT)
+                {
                     SemanticError(15, var_dec.lineno, "Redefine Field", name);
-            }
-            else
-            {
-                Symbol *symbol = malloc(sizeof(Symbol));
-                symbol->name = name;
-                symbol->next = NULL;
-                if (kind == VAR)
-                {
-                    symbol->name = name;
-                    symbol->kind = VAR;
-                    symbol->type = type;
-                    symbol->next = NULL;
+                    field->name = random();
+                    field->type = malloc(sizeof(Type));
+                    *field->type = *type;
+                    field->next= NULL;
                 }
-                if (kind == STRUCT)
-                {
-                    field->type = type;
-                    field->name = name;
-                    field->next = NULL;
-                    symbol->kind = FIELD;
-                    symbol->name = name;
-                }
-                SymbolInsert(symbol);
-            }
-            break;
         }
-    case VarDec_LBINTRB:
+        else
+        {
+            Symbol *symbol = malloc(sizeof(Symbol));
+            symbol->name = name;
+            symbol->next = NULL;
+            if (kind == VAR)
+            {
+                symbol->name = name;
+                symbol->kind = VAR;
+                symbol->type = type;
+                symbol->next = NULL;
+            }
+            if (kind == STRUCT)
+            {
+                field->type = malloc(sizeof(Type));
+                *field->type = *type;
+                field->name = name;
+                field->next = NULL;
+                symbol->kind = FIELD;
+                symbol->name = name;
+            }
+            SymbolInsert(symbol);
+        }
+        break;
+    }
+    case VarDec_VarDecLbIntRb:
+    {
+        //TODO ADD HERE
+        //int a[10][2] -> a array(array(int,2),10)
+        Type* type_ = malloc(sizeof(Type));
+        type_->value = LEFT;
+        type_->kind = ARRAY;
+        type_->array = malloc(sizeof(type_->array));
+        type_->array->type = malloc(sizeof(Type));
+        *type_->array->type = *type;
+        type_->array->size = IntAnalyze(sons[2]);
+        VarDecAnalyze(sons[0], type_, field, kind);
+        break;
+    }
+    default:
+        break;
+    }
+}
 
+Type *ExpAnalyze(int index)
+{
+    ASTNode exp = nodes[index];
+    DebugPrintNameType(exp);
+    int *sons = GetSon(exp);
+    switch (exp.type)
+    {
+    case Exp_ExpAssignopExp:
+    {
+        Type *t1 = ExpAnalyze(sons[0]);
+        Type *t2 = ExpAnalyze(sons[2]);
+        if (t1 != NULL && t1->value == LEFT)
+        {
+            SemanticError(6, exp.lineno, "The left-hand side of an assignment must be a variable.", "");
+        }
+        if (t1 != NULL && t2 != NULL && TypeKindEqual(t1, t2) != 1)
+        {
+            SemanticError(5, exp.lineno, " Type mismatched for assignment.", "");
+        }
+        return t1;
+    }
+    case Exp_ExpAndExp:
+    case Exp_ExpOrExp:
+    case Exp_ExpRelopExp:
         break;
     default:
         break;
@@ -513,6 +726,18 @@ char *TagAnalyze(int index)
 {
     ASTNode tag = nodes[index];
     return nodes[tag.child].value;
+}
+
+int ArgsAnalyze(int index)
+{
+    ASTNode args = nodes[index];
+    DebugPrintNameType(args);
+}
+
+int IntAnalyze(int index)
+{
+    ASTNode Int = nodes[index];
+    return 3;
 }
 
 int semanticAnalyze(int last_node)

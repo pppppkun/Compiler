@@ -1,6 +1,1 @@
-struct A {
-    int a,b,c;
-    int e[3];
-};
-
-struct A abc[3];
+int a[32][31232];

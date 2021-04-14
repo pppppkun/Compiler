@@ -791,7 +791,7 @@ Type *ExpAnalyze(int index)
         char* name = nodes[sons[0]].name;
         Field* func_params = ArgsAnalyze(sons[2]);
         if(SymbolContains(name, FUNCION)==0) {
-            SemanticError(2, exp.lineno, "Undefined function","name");
+            SemanticError(2, exp.lineno, "Undefined function",name);
             return NULL;
         }
         else{
@@ -803,8 +803,41 @@ Type *ExpAnalyze(int index)
             Symbol* func = SymbolGet(name, FUNCION);
             if(FuncParamEqual(func->type->field->next, func_params) == 0) SemanticError(9, exp.lineno, "The number or type of the actual participating parameters does not match during a function call",name);
             //TODO need fix type
-            else return func->type->field->type; 
+            return func->type->field->type; 
         }
+    }
+    case Exp_IdLpRp:
+    {
+        char* name = nodes[sons[0]].value;
+        if(SymbolContains(name, FUNCION) == 0){
+            SemanticError(2, exp.lineno, "Undefined function", name);
+            return NULL;
+        }
+        else{
+            if(SymbolContains(name, VAR) == 1)
+            {
+                SemanticError(11, exp.lineno, "Not a function.",name);
+                return NULL;
+            }
+            Symbol* func = SymbolGet(name, FUNCION);
+            if(func->type->field->next != NULL) SemanticError(9, exp.lineno, "The number or type of the actual participating parameters does not match during a function call",name);
+            return func->type->field->type;
+        }
+    }
+    case Exp_ExpLbExpRb:
+    {
+        Type* t1 = ExpAnalyze(sons[0]);
+        Type* t2 = ExpAnalyze(sons[2]);
+        if(t1!=NULL&&t1->kind!=ARRAY) 
+        {
+            SemanticError(10, exp.lineno, "Not a array.","");
+            return NULL;
+        }
+        if(t2!=NULL&&TypeBasicJudge(t2, INT)==0)
+        {
+            SemanticError(12, exp.lineno, "Only integers can be used as array subscripts.","");
+        }
+        return t1->array->type;
     }
     default:
         break;

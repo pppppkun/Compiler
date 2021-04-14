@@ -92,10 +92,14 @@ Stmt : Exp SEMI {$$=buildAST("Stmt",2,$1,$2,1);}
     | IF LP error RP Stmt %prec LOWER_THAN_ELSE
     | IF LP Exp RP error %prec LOWER_THAN_ELSE
     | IF LP error RP error %prec LOWER_THAN_ELSE
+    | IF error RP error %prec LOWER_THAN_ELSE
+    | IF LP error Stmt %prec LOWER_THAN_ELSE
     | IF LP error RP Stmt ELSE Stmt
     | IF LP Exp RP error ELSE Stmt
     | IF LP Exp RP Stmt ELSE error
     | WHILE LP error RP Stmt
+    | WHILE LP error Stmt
+    | WHILE error RP Stmt
     | error SEMI {yyerrok;}
     | Exp error
     ;

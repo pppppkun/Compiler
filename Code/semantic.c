@@ -309,9 +309,31 @@ Symbol *SymbolGet(char *name, SymbolKind kind)
 //given function is judge whether or not.
 //1. 多次声明是冲突的.
 //2. 声明和定义是冲突的.
-int UndefFunctionJudge()
+int UndefFunctionJudge(Symbol *symbol)
 {
-
+    char *name = symbol->name;
+    //TODO 这里会有一个链条
+    Symbol *func = SymbolGet(name, FUNCTION);
+    if (func == NULL)
+        return 1;
+    if (symbol->kind == UNDEF)
+    {
+        if (func->kind == DEF)
+        {
+            //TODO
+        }
+        else if (func->kind == UNDEF)
+        {
+            //TODO
+        }
+    }
+    if (symbol->kind == DEF)
+    {
+        if (func->kind == UNDEF)
+        {
+            //TODO
+        }
+    }
 }
 
 int ProgramAnalyze(int index)
@@ -382,11 +404,12 @@ int FunDecAnalyze(int index, Type *type, TypeKind kind)
     DebugPrintNameType(fun_dec);
     int *sons = GetSon(fun_dec);
     char *name = nodes[sons[0]].value;
-    if (SymbolContains(name, FUNCTION) == 1);
+    if (SymbolContains(name, FUNCTION) == 1)
+        ;
     {
         //TODO
-        Symbol* func = SymbolGet(name, FUNCTION);
-        if(func->kind==DEF)
+        Symbol *func = SymbolGet(name, FUNCTION);
+        if (func->kind == DEF)
         {
             SemanticError(4, fun_dec.lineno, "Redefined function", name);
             return 0;
@@ -409,7 +432,6 @@ int FunDecAnalyze(int index, Type *type, TypeKind kind)
         field_->next = field;
         symbol->type->field = malloc(sizeof(Field));
         *symbol->type->field = *field_;
-        UndefFunctionJudge();
         break;
     }
     case FunDec_IDLPRP:
@@ -424,6 +446,7 @@ int FunDecAnalyze(int index, Type *type, TypeKind kind)
     default:
         break;
     }
+    UndefFunctionJudge(symbol);
     SymbolInsert(symbol);
 }
 
@@ -930,7 +953,7 @@ Type *ExpAnalyze(int index)
             {
                 SemanticError(18, exp.lineno, "This function is declare but not defined", name);
                 return NULL;
-            }    
+            }
             //TODO need fix type
             return func->type->field->type;
         }
@@ -971,13 +994,16 @@ Type *ExpAnalyze(int index)
             SemanticError(12, exp.lineno, "Only integers can be used as array subscripts", NULL);
             return NULL;
         }
-        if(t1 == NULL) return NULL;
-        else return t1->array->type;
+        if (t1 == NULL)
+            return NULL;
+        else
+            return t1->array->type;
     }
     case Exp_ExpDotId:
     {
         Type *t1 = ExpAnalyze(sons[0]);
-        if(t1 == NULL) {
+        if (t1 == NULL)
+        {
             return NULL;
         }
         if (t1->kind != STRUCTURE)
@@ -1005,10 +1031,12 @@ Type *ExpAnalyze(int index)
             SemanticError(1, exp.lineno, "Undefined variable", name);
             return NULL;
         }
-        Symbol* s1 = SymbolGet(name, VAR);
+        Symbol *s1 = SymbolGet(name, VAR);
 
-        if(s1 == NULL) return NULL;
-        if(s1->type != NULL) return s1->type;
+        if (s1 == NULL)
+            return NULL;
+        if (s1->type != NULL)
+            return s1->type;
     }
     case Exp_Int:
     case Exp_Float:
@@ -1048,22 +1076,22 @@ char *TagAnalyze(int index)
 Field *ArgsAnalyze(int index)
 {
     ASTNode args = nodes[index];
-    int* sons = GetSon(args);
+    int *sons = GetSon(args);
     DebugPrintNameType(args);
-    switch (args.type) 
+    switch (args.type)
     {
     case Args_ExpCommaArgs:
     {
-        Type* t1 = ExpAnalyze(sons[0]);
-        Field* f2 = malloc(sizeof(Field));
+        Type *t1 = ExpAnalyze(sons[0]);
+        Field *f2 = malloc(sizeof(Field));
         f2->type = t1;
-        Field* f1 = ArgsAnalyze(sons[2]);
+        Field *f1 = ArgsAnalyze(sons[2]);
         f2->next = f1;
         return f2;
     }
     case Args_Exp:
     {
-        Field* f1 = malloc(sizeof(Field));
+        Field *f1 = malloc(sizeof(Field));
         f1->type = ExpAnalyze(sons[0]);
         return f1;
     }

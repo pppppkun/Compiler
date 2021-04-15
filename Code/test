@@ -1,6 +1,7 @@
 int a;
+int swap();
 int main()
 {
     a = 1;
-    swap();
+    swap(a);
 }

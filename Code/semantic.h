@@ -1,6 +1,6 @@
 #include "global.h"
 
-#define SEMANTIC_DEBUG 1
+#define SEMANTIC_DEBUG 0
 #define ExtDefList_ExtDefExtDefList 1
 #define ExtDef_SpecifierExtDecListSEMI 1
 #define ExtDef_SpecifierSEMI 2
@@ -52,6 +52,8 @@
 #define Exp_Id 16
 #define Exp_Int 17
 #define Exp_Float 18
+#define Args_ExpCommaArgs 1
+#define Args_Exp 2
 #define ANONYMITY "!@#$^&&"
 
 typedef struct Type Type;
@@ -93,7 +95,7 @@ struct Type
 {
     TypeKind kind;
     TypeValue value;
-    char* struct_name;
+    char *struct_name;
     union
     {
         BasicType basic;
@@ -137,7 +139,7 @@ int ExtDefAnalyze(int);                               //done
 int SpecifierAnalyze(int, Type *);                    //done
 int ExtDecListAnalyze(int, Type *);                   //done
 int FunDecAnalyze(int index, Type *type, TypeKind);   //done
-int CompStAnalyze(int, Symbol*);                               //done
+int CompStAnalyze(int, Symbol *);                     //done
 int VarDecAnalyze(int, Type *, Field *, SymbolKind);  //done
 int StructAnalyze(int, Type *);                       //done
 char *OptTagAnalyze(int);                             //done
@@ -146,9 +148,9 @@ int DefAnalyze(int, Field *, SymbolKind);             //done
 char *TagAnalyze(int);                                //done
 Field *VarListAnalyze(int);                           //done
 Field *ParamDecAnalyze(int);                          //done
-int StmtListAnalyze(int, Symbol*);                             //done
+int StmtListAnalyze(int, Symbol *);                   //done
 Type *ExpAnalyze(int);                                //done
-int StmtAnalyze(int, Symbol*);                                 //done
+int StmtAnalyze(int, Symbol *);                       //done
 int DecListAnalyze(int, Type *, Field *, SymbolKind); //done
 int DecAnalyze(int, Type *, Field *, SymbolKind);     //done
 Field *ArgsAnalyze(int);                              //done

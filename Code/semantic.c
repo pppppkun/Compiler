@@ -100,7 +100,7 @@ void DebugPrintSymbol()
                 }
                 if (symbol->kind == FUNCTION)
                 {
-                    Field* field_ = symbol->type->field;
+                    Field *field_ = symbol->type->field;
                     while (field_ != NULL)
                     {
                         printf("%s ", field_->name);
@@ -247,7 +247,7 @@ int SymbolInsert(Symbol *symbol)
     }
     return index;
 }
-
+// 1 contains 0 don't contains
 int SymbolContains(char *name, SymbolKind kind)
 {
     unsigned int index = hash_pjw(name);
@@ -258,27 +258,29 @@ int SymbolContains(char *name, SymbolKind kind)
     {
         if (strcmp(name, symbol->name) == 0)
         {
-            switch (symbol->kind)
-            {
-            case VAR:
-                if (kind == VAR || kind == FIELD)
-                    return 1;
-                break;
-            case FIELD:
-                if (kind == FIELD || kind == VAR)
-                    return 1;
-                break;
-            case STRUCT:
-                if (kind == VAR || kind == STRUCT)
-                    return 1;
-                break;
-            case FUNCTION:
-                if (kind == FUNCTION)
-                    return 1;
-                break;
-            default:
-                break;
-            }
+            
+            return 1;
+            // switch (symbol->kind)
+            // {
+            // case VAR:
+            //     if (kind == VAR || kind == FIELD || kind == FUNCTION_PARAM)
+            //         return 1;
+            //     break;
+            // case FIELD:
+            //     if (kind == FIELD || kind == VAR || kind == FUNCTION_PARAM)
+            //         return 1;
+            //     break;
+            // case STRUCT:
+            //     if (kind == VAR || kind == STRUCT )
+            //         return 1;
+            //     break;
+            // case FUNCTION:
+            //     if (kind == FUNCTION)
+            //         return 1;
+            //     break;
+            // default:
+            //     break;
+            // }
         }
         symbol = symbol->next;
     }
@@ -313,7 +315,7 @@ int ProgramAnalyze(int index)
     ASTNode child = nodes[program.child];
     // printf("%s %s %s\n", child.name, child.value, node.name);
     ExtDefListAnalyze(program.child);
-    DebugPrintSymbol();
+    //DebugPrintSymbol();
     return 0;
 }
 
@@ -397,12 +399,6 @@ int FunDecAnalyze(int index, Type *type, TypeKind kind)
         field_->next = field;
         symbol->type->field = malloc(sizeof(Field));
         *symbol->type->field = *field_;
-        // while (field_ != NULL)
-        // {
-        //     printf("%s ", field_->name);
-        //     field_ = field_->next;
-        // }
-        // printf("\n");
         break;
     }
     case FunDec_IDLPRP:
@@ -479,11 +475,12 @@ int StmtAnalyze(int index, Symbol *func)
         break;
     case Stmt_CompSt:
         CompStAnalyze(sons[0], func);
+        break;
     case Stmt_ReturnExpSEMI:
     {
         Type *type = ExpAnalyze(sons[1]);
         Type *ret = func->type->field->type;
-        if (TypeEqual(type, ret) != 1)
+        if (type != NULL && ret != NULL && TypeEqual(type, ret) != 1)
         {
             SemanticError(8, stmt.lineno, "Type mismatched for return", NULL);
         }
@@ -772,7 +769,7 @@ int VarDecAnalyze(int index, Type *type, Field *field, SymbolKind kind)
                 symbol->type = type;
                 symbol->next = NULL;
             }
-            if (kind == FIELD || kind == FUNCTION_PARAM)
+            if (kind == FIELD)
             {
                 field->type = malloc(sizeof(Type));
                 *field->type = *type;
@@ -780,6 +777,16 @@ int VarDecAnalyze(int index, Type *type, Field *field, SymbolKind kind)
                 field->next = NULL;
                 symbol->kind = kind;
                 symbol->name = name;
+            }
+            if (kind == FUNCTION_PARAM)
+            {
+                field->type = malloc(sizeof(Type));
+                *field->type = *type;
+                field->name = name;
+                field->next = NULL;
+                symbol->kind = VAR;
+                symbol->name = name;
+                symbol->type = type;
             }
             SymbolInsert(symbol);
         }
@@ -883,7 +890,7 @@ Type *ExpAnalyze(int index)
     }
     case Exp_IdLpArgsRp:
     {
-        char *name = nodes[sons[0]].name;
+        char *name = nodes[sons[0]].value;
         Field *func_params = ArgsAnalyze(sons[2]);
         if (SymbolContains(name, FUNCTION) == 0)
         {
@@ -948,7 +955,9 @@ Type *ExpAnalyze(int index)
     case Exp_ExpDotId:
     {
         Type *t1 = ExpAnalyze(sons[0]);
-        printf("%d\n", t1->kind);
+        if(t1 == NULL) {
+            return NULL;
+        }
         if (t1->kind != STRUCTURE)
         {
             SemanticError(13, exp.lineno, "using dot on non-struct var", NULL);
@@ -958,12 +967,13 @@ Type *ExpAnalyze(int index)
         Field *field = t1->field;
         while (field != NULL)
         {
-            if (strcmp(field->name, name) == 1)
+            if (strcmp(field->name, name) == 0)
                 return field->type;
             else
                 field = field->next;
         }
         SemanticError(14, exp.lineno, "Non-existent field", name);
+        return NULL;
     }
     case Exp_Id:
     {

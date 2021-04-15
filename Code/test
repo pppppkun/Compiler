@@ -1,4 +1,6 @@
-int main(int a,int b,int c)
+int a;
+int main()
 {
-    return 1.123;
+    a = 1;
+    swap();
 }

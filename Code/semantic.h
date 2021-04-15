@@ -1,6 +1,6 @@
 #include "global.h"
 
-#define SEMANTIC_DEBUG 0
+#define SEMANTIC_DEBUG 1
 #define ExtDefList_ExtDefExtDefList 1
 #define ExtDef_SpecifierExtDecListSEMI 1
 #define ExtDef_SpecifierSEMI 2
@@ -52,23 +52,6 @@
 #define Exp_Id 16
 #define Exp_Int 17
 #define Exp_Float 18
-// | Exp AND Exp {$$=buildAST("Exp",3,$1,$2,$3,2);}
-// | Exp OR Exp {$$=buildAST("Exp",3,$1,$2,$3,3);}
-// | Exp RELOP Exp {$$=buildAST("Exp",3,$1,$2,$3,4);}
-// | Exp PLUS Exp {$$=buildAST("Exp",3,$1,$2,$3,5);}
-// | Exp MINUS Exp {$$=buildAST("Exp",3,$1,$2,$3,6);}
-// | Exp STAR Exp {$$=buildAST("Exp",3,$1,$2,$3,7);}
-// | Exp DIV Exp {$$=buildAST("Exp",3,$1,$2,$3,8);}
-// | LP Exp RP {$$=buildAST("Exp",3,$1,$2,$3,9);}
-// | MINUS Exp {$$=buildAST("Exp",2,$1,$2,10);}
-// | NOT Exp {$$=buildAST("Exp",2,$1,$2,11);}
-// | ID LP Args RP {$$=buildAST("Exp",4,$1,$2,$3,$4,12);}
-// | ID LP RP {$$=buildAST("Exp",3,$1,$2,$3,13);}
-// | Exp LB Exp RB {$$=buildAST("Exp",4,$1,$2,$3,$4,14);}
-// | Exp DOT ID {$$=buildAST("Exp",3,$1,$2,$3,15);}
-// | ID {$$=buildAST("Exp",1,$1,16);}
-// | INT {$$=buildAST("Exp",1,$1,17);}
-// | FLOAT {$$=buildAST("Exp",1,$1,18);}
 #define ANONYMITY "!@#$^&&"
 
 typedef struct Type Type;
@@ -110,6 +93,7 @@ struct Type
 {
     TypeKind kind;
     TypeValue value;
+    char* struct_name;
     union
     {
         BasicType basic;
@@ -153,7 +137,7 @@ int ExtDefAnalyze(int);                               //done
 int SpecifierAnalyze(int, Type *);                    //done
 int ExtDecListAnalyze(int, Type *);                   //done
 int FunDecAnalyze(int index, Type *type, TypeKind);   //done
-int CompStAnalyze(int);                               //done
+int CompStAnalyze(int, Symbol*);                               //done
 int VarDecAnalyze(int, Type *, Field *, SymbolKind);  //done
 int StructAnalyze(int, Type *);                       //done
 char *OptTagAnalyze(int);                             //done
@@ -162,9 +146,9 @@ int DefAnalyze(int, Field *, SymbolKind);             //done
 char *TagAnalyze(int);                                //done
 Field *VarListAnalyze(int);                           //done
 Field *ParamDecAnalyze(int);                          //done
-int StmtListAnalyze(int);                             //done
+int StmtListAnalyze(int, Symbol*);                             //done
 Type *ExpAnalyze(int);                                //done
-int StmtAnalyze(int);                                 //done
+int StmtAnalyze(int, Symbol*);                                 //done
 int DecListAnalyze(int, Type *, Field *, SymbolKind); //done
 int DecAnalyze(int, Type *, Field *, SymbolKind);     //done
 Field *ArgsAnalyze(int);                              //done

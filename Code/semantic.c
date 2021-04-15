@@ -18,7 +18,8 @@ void DebugPrintNameValue(ASTNode node)
 
 void DebugPrintSymbol()
 {
-    if(!SEMANTIC_DEBUG) return;
+    if (!SEMANTIC_DEBUG)
+        return;
     for (int i = 0; i < nodes_point; i++)
     {
         Symbol *symbol = symbol_table[i];
@@ -97,6 +98,16 @@ void DebugPrintSymbol()
                     }
                     printf("\tfinal type is %d\n", type->kind);
                 }
+                if (symbol->kind == FUNCTION)
+                {
+                    Field* field_ = symbol->type->field;
+                    while (field_ != NULL)
+                    {
+                        printf("%s ", field_->name);
+                        field_ = field_->next;
+                    }
+                    printf("\n");
+                }
                 symbol = symbol->next;
             }
         }
@@ -106,11 +117,12 @@ void DebugPrintSymbol()
 void SemanticError(int typeno, int lineno, char *reason, char *addition)
 {
     printf("Error type %d at Line %d: %s ", typeno, lineno, reason);
-    if(addition!=NULL&&strlen(addition)!=0)
+    if (addition != NULL && strlen(addition) != 0)
     {
         printf("about %s.\n", addition);
     }
-    else printf(".\n");
+    else
+        printf(".\n");
     //Error type 1 at Line 4: Undefined variable "j".
 }
 
@@ -143,11 +155,12 @@ int TypeEqual(Type *t1, Type *t2)
         else
             return 0;
     case ARRAY:
-        //TODO
-        break;
+        return TypeEqual(t1->array->type, t2->array->type);
     case STRUCTURE:
-        //TODO
-        break;
+        if (strcmp(t1->struct_name, t2->struct_name) == 0)
+            return 1;
+        else
+            return 0;
     default:
         break;
     }
@@ -346,7 +359,9 @@ int ExtDefAnalyze(int index)
         SpecifierAnalyze(sons[0], type);
         type->value = RIGHT;
         FunDecAnalyze(sons[1], type, DEF);
-        CompStAnalyze(sons[2]);
+        char *name = nodes[nodes[sons[1]].child].value;
+        Symbol *func = SymbolGet(name, FUNCTION);
+        CompStAnalyze(sons[2], func);
         break;
     default:
         break;
@@ -380,13 +395,14 @@ int FunDecAnalyze(int index, Type *type, TypeKind kind)
         field_->name = "RETURN";
         field_->type = type;
         field_->next = field;
-        symbol->type->field = field_;
-        while (field_ != NULL)
-        {
-            printf("%s ", field_->name);
-            field_ = field_->next;
-        }
-        printf("\n");
+        symbol->type->field = malloc(sizeof(Field));
+        *symbol->type->field = *field_;
+        // while (field_ != NULL)
+        // {
+        //     printf("%s ", field_->name);
+        //     field_ = field_->next;
+        // }
+        // printf("\n");
         break;
     }
     case FunDec_IDLPRP:
@@ -430,28 +446,28 @@ Field *ParamDecAnalyze(int index)
     return field;
 }
 
-int CompStAnalyze(int index)
+int CompStAnalyze(int index, Symbol *func)
 {
     ASTNode comp_st = nodes[index];
     DebugPrintNameType(comp_st);
     int *sons = GetSon(comp_st);
     DefListAnalyze(sons[1], NULL, VAR);
-    StmtListAnalyze(sons[2]);
+    StmtListAnalyze(sons[2], func);
 }
 
-int StmtListAnalyze(int index)
+int StmtListAnalyze(int index, Symbol *func)
 {
     ASTNode stmt_list = nodes[index];
     DebugPrintNameType(stmt_list);
     if (stmt_list.type == StmtList_StmtStmtList)
     {
         int *sons = GetSon(stmt_list);
-        StmtAnalyze(sons[0]);
-        StmtListAnalyze(sons[1]);
+        StmtAnalyze(sons[0], func);
+        StmtListAnalyze(sons[1], func);
     }
 }
 
-int StmtAnalyze(int index)
+int StmtAnalyze(int index, Symbol *func)
 {
     ASTNode stmt = nodes[index];
     int *sons = GetSon(stmt);
@@ -462,22 +478,29 @@ int StmtAnalyze(int index)
         ExpAnalyze(sons[0]);
         break;
     case Stmt_CompSt:
-        CompStAnalyze(sons[0]);
+        CompStAnalyze(sons[0], func);
     case Stmt_ReturnExpSEMI:
-        ExpAnalyze(sons[1]);
+    {
+        Type *type = ExpAnalyze(sons[1]);
+        Type *ret = func->type->field->type;
+        if (TypeEqual(type, ret) != 1)
+        {
+            SemanticError(8, stmt.lineno, "Type mismatched for return", NULL);
+        }
         break;
+    }
     case Stmt_IfLpExpRpStmt:
         ExpAnalyze(sons[2]);
-        StmtAnalyze(sons[4]);
+        StmtAnalyze(sons[4], func);
         break;
     case Stmt_IfLpExpRpStmtElseStmt:
         ExpAnalyze(sons[2]);
-        StmtAnalyze(sons[4]);
-        StmtAnalyze(sons[6]);
+        StmtAnalyze(sons[4], func);
+        StmtAnalyze(sons[6], func);
         break;
     case Stmt_WhileLpExpRpStmt:
         ExpAnalyze(sons[2]);
-        StmtAnalyze(sons[4]);
+        StmtAnalyze(sons[4], func);
         break;
     default:
         break;
@@ -556,6 +579,7 @@ int StructAnalyze(int index, Type *type)
             symbol->kind = STRUCT;
             symbol->type = type;
             symbol->next = NULL;
+            type->struct_name = name;
             Field *field = malloc(sizeof(Field));
             type->field = field;
             DefListAnalyze(sons[3], field, FIELD);
@@ -688,12 +712,12 @@ int DecAnalyze(int index, Type *type, Field *field, SymbolKind kind)
         }
         if (kind == VAR)
         {
-            if(type->value==RIGHT)
+            if (type->value == RIGHT)
             {
                 SemanticError(6, dec.lineno, "The left-hand side of an assignment must be a variable", NULL);
             }
-            Type* t1 = ExpAnalyze(sons[2]);
-            if(TypeEqual(t1, type)==0)
+            Type *t1 = ExpAnalyze(sons[2]);
+            if (TypeEqual(t1, type) == 0)
             {
                 SemanticError(5, dec.lineno, "Type mismatched for assignment", NULL);
             }
@@ -923,8 +947,23 @@ Type *ExpAnalyze(int index)
     }
     case Exp_ExpDotId:
     {
-        //TODO;
-        return NULL;
+        Type *t1 = ExpAnalyze(sons[0]);
+        printf("%d\n", t1->kind);
+        if (t1->kind != STRUCTURE)
+        {
+            SemanticError(13, exp.lineno, "using dot on non-struct var", NULL);
+            return NULL;
+        }
+        char *name = nodes[sons[2]].value;
+        Field *field = t1->field;
+        while (field != NULL)
+        {
+            if (strcmp(field->name, name) == 1)
+                return field->type;
+            else
+                field = field->next;
+        }
+        SemanticError(14, exp.lineno, "Non-existent field", name);
     }
     case Exp_Id:
     {

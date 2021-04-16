@@ -125,13 +125,13 @@ struct Symbol
     SymbolKind kind;
     char *name;
     Type *type;
-    int hashcode;
+    int lineno;
     char *value;
     Symbol *next;
 };
 
 Symbol **symbol_table;
-
+int* function_index;
 int semanticAnalyze(int);                             //done
 int ProgramAnalyze(int);                              //done
 int ExtDefListAnalyze(int);                           //done

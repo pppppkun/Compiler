@@ -23,7 +23,7 @@ void DebugPrintSymbol()
     for (int i = 0; i < nodes_point; i++)
     {
         Symbol *symbol = symbol_table[i];
-        if (symbol->hashcode == -1)
+        if (symbol->lineno == -1)
             continue;
         else
         {
@@ -230,10 +230,10 @@ int SymbolInsert(Symbol *symbol)
 {
     char *name = symbol->name;
     unsigned int index = hash_pjw(name);
-    symbol->hashcode = index;
     // first insert
-    if (symbol_table[index]->hashcode == -1)
+    if (symbol_table[index]->lineno == -1)
     {
+        free(symbol_table[index]);
         symbol_table[index] = symbol;
     }
     else
@@ -253,7 +253,7 @@ int SymbolContains(char *name, SymbolKind kind)
 {
     unsigned int index = hash_pjw(name);
     Symbol *symbol = symbol_table[index];
-    if (symbol->hashcode == -1)
+    if (symbol->lineno == -1)
         return 0;
     while (symbol != NULL)
     {
@@ -309,31 +309,68 @@ Symbol *SymbolGet(char *name, SymbolKind kind)
 //given function is judge whether or not.
 //1. 多次声明是冲突的.
 //2. 声明和定义是冲突的.
-int UndefFunctionJudge(Symbol *symbol)
+// 0 表示没有冲突 1表示冲突
+int UndefFunctionJudge(Symbol *symbol, int lineno)
 {
     char *name = symbol->name;
     //TODO 这里会有一个链条
-    Symbol *func = SymbolGet(name, FUNCTION);
-    if (func == NULL)
-        return 1;
-    if (symbol->kind == UNDEF)
+    unsigned int index = hash_pjw(name);
+    Symbol *symbol_ = symbol_table[index];
+    if (symbol_->lineno == -1)
+        return 0;
+    while (symbol_ != NULL)
     {
-        if (func->kind == DEF)
+        if (strcmp(name, symbol_->name) != 0)
         {
-            //TODO
+            symbol_ = symbol_->next;
+            continue;
         }
-        else if (func->kind == UNDEF)
+        if (symbol->kind == UNDEF)
         {
-            //TODO
+            if (symbol_->kind == DEF || symbol_->kind == UNDEF)
+            {
+                //TODO
+                Field *f1 = symbol->type->field;
+                Field *f2 = symbol_->type->field;
+                if (FuncParamEqual(f1, f2) == 0)
+                {
+                    SemanticError(19, lineno, "Inconsistent declaration of function", name);
+                    return 1;
+                }
+            }
         }
+        if (symbol->kind == DEF)
+        {
+            if (symbol_->kind == UNDEF)
+            {
+                Field *f1 = symbol->type->field;
+                Field *f2 = symbol_->type->field;
+                if (FuncParamEqual(f1, f2) == 0)
+                {
+                    SemanticError(19, lineno, "Inconsistent declaration of function", name);
+                    return 1;
+                }
+            }
+        }
+        symbol_ = symbol_->next;
     }
-    if (symbol->kind == DEF)
+    return 0;
+}
+//-1 error
+//0 undef
+//1 def
+int checkWhetherDef(Symbol *symbol, char *name)
+{
+    if (symbol == NULL || symbol->lineno == -1)
+        return -1;
+    while (symbol != NULL)
     {
-        if (func->kind == UNDEF)
-        {
-            //TODO
-        }
+        if (symbol->kind == FUNCTION && (strcmp(symbol->name, name) == 0) && symbol->type->kind == DEF)
+            return 1;
+        else
+            symbol = symbol->next;
     }
+    return 0;
 }
 
 int ProgramAnalyze(int index)
@@ -405,11 +442,10 @@ int FunDecAnalyze(int index, Type *type, TypeKind kind)
     int *sons = GetSon(fun_dec);
     char *name = nodes[sons[0]].value;
     if (SymbolContains(name, FUNCTION) == 1)
-        ;
     {
         //TODO
         Symbol *func = SymbolGet(name, FUNCTION);
-        if (func->kind == DEF)
+        if (func->type->kind == DEF)
         {
             SemanticError(4, fun_dec.lineno, "Redefined function", name);
             return 0;
@@ -421,6 +457,7 @@ int FunDecAnalyze(int index, Type *type, TypeKind kind)
     symbol->next = NULL;
     symbol->type = malloc(sizeof(Type));
     symbol->type->kind = kind;
+    symbol->lineno = fun_dec.lineno;
     switch (fun_dec.type)
     {
     case FunDec_IDLPVarListRP:
@@ -446,8 +483,10 @@ int FunDecAnalyze(int index, Type *type, TypeKind kind)
     default:
         break;
     }
-    UndefFunctionJudge(symbol);
-    SymbolInsert(symbol);
+    if (UndefFunctionJudge(symbol, fun_dec.lineno) == 0)
+    {
+        SymbolInsert(symbol);
+    }
 }
 
 Field *VarListAnalyze(int index)
@@ -618,6 +657,7 @@ int StructAnalyze(int index, Type *type)
             symbol->kind = STRUCT;
             symbol->type = type;
             symbol->next = NULL;
+            symbol->lineno = struct_.lineno;
             type->struct_name = name;
             Field *field = malloc(sizeof(Field));
             type->field = field;
@@ -804,6 +844,7 @@ int VarDecAnalyze(int index, Type *type, Field *field, SymbolKind kind)
             Symbol *symbol = malloc(sizeof(Symbol));
             symbol->name = name;
             symbol->next = NULL;
+            symbol->lineno = var_dec.lineno;
             if (kind == VAR)
             {
                 symbol->name = name;
@@ -1063,7 +1104,7 @@ char *OptTagAnalyze(int index)
     case OptTag_ID:
         return nodes[opt_tag.child].value;
     default:
-        return ANONYMITY;
+        return random();
     }
 }
 
@@ -1093,6 +1134,7 @@ Field *ArgsAnalyze(int index)
     {
         Field *f1 = malloc(sizeof(Field));
         f1->type = ExpAnalyze(sons[0]);
+        f1->next = NULL;
         return f1;
     }
     default:
@@ -1119,7 +1161,25 @@ int semanticAnalyze(int last_node)
     for (int i = 0; i < nodes_point; i++)
     {
         symbol_table[i] = malloc(sizeof(Symbol *) * nodes_point);
-        symbol_table[i]->hashcode = -1;
+        symbol_table[i]->lineno = -1;
     }
-    return ProgramAnalyze(last_node);
+    ProgramAnalyze(last_node);
+    for (int i = 0; i < nodes_point; i++)
+    {
+        if (symbol_table[i]->lineno == -1)
+            continue;
+        else
+        {
+            Symbol *symbol = symbol_table[i];
+            while (symbol != NULL)
+            {
+                if (symbol->kind == FUNCTION && symbol->type->kind == UNDEF)
+                {
+                    if (checkWhetherDef(symbol_table[i], symbol->name) == 0)
+                        SemanticError(18, symbol->lineno, "Undefined functio", symbol->name);
+                }
+                symbol = symbol->next;
+            }
+        }
+    }
 }

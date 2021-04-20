@@ -1,7 +1,7 @@
 #include <stdio.h>
+#include <string.h>
 #include <stdarg.h>
 #include <stdlib.h>
-#include <string.h>
 
 #ifndef _ASTNODE_
 #define _ASTNODE_
@@ -14,6 +14,6 @@ struct ASTNode{
     int brother;
     int type;//mark terminator or not
 };
-ASTNode* nodes;
+ASTNode** nodes;
 int nodes_point;
 #endif

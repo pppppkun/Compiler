@@ -166,7 +166,8 @@ int TypeEqual(Type *t1, Type *t2)
             break;
         }
     }
-    else return 0;
+    else
+        return 0;
     //TODO
     // if(t1!=NULL && t2!=NULL)
     // {
@@ -276,6 +277,7 @@ int SymbolContains(char *name, SymbolKind kind)
     {
         if (strcmp(name, symbol->name) == 0)
         {
+            // printf("%s %d\n", symbol->name, symbol->kind);
             switch (symbol->kind)
             {
             case VAR:
@@ -287,6 +289,11 @@ int SymbolContains(char *name, SymbolKind kind)
                     return 1;
                 break;
             case STRUCT:
+                if (kind == VAR || kind == STRUCT || kind == FIELD || kind == FUNCTION_PARAM)
+                    return 1;
+                break;
+            case FUNCTION_PARAM:
+                printf("%s\n", symbol->name);
                 if (kind == VAR || kind == STRUCT || kind == FIELD || kind == FUNCTION_PARAM)
                     return 1;
                 break;
@@ -992,53 +999,52 @@ Type *ExpAnalyze(int index)
     {
         char *name = nodes[sons[0]]->value;
         Field *func_params = ArgsAnalyze(sons[2]);
+        if (SymbolContains(name, VAR) == 1)
+        {
+            SemanticError(11, exp->lineno, "Not a function", name);
+            return NULL;
+        }
         if (SymbolContains(name, FUNCTION) == 0 && SymbolContains(name, VAR) == 0)
         {
             SemanticError(2, exp->lineno, "Undefined function", name);
             return NULL;
         }
-        else
+        Symbol *func = SymbolGet(name, FUNCTION);
+        if (FuncParamEqual(func->type->field->next, func_params) == 0)
+            SemanticError(9, exp->lineno, "The number or type of the actual participating parameters does not match during a function call", name);
+        if (SymbolGet(name, FUNCTION)->type->kind == UNDEF)
         {
-            if (SymbolContains(name, VAR) == 1)
-            {
-                SemanticError(11, exp->lineno, "Not a function", name);
-                return NULL;
-            }
-            Symbol *func = SymbolGet(name, FUNCTION);
-            if (FuncParamEqual(func->type->field->next, func_params) == 0)
-                SemanticError(9, exp->lineno, "The number or type of the actual participating parameters does not match during a function call", name);
-            if (SymbolGet(name, FUNCTION)->type->kind == UNDEF)
-            {
-                SemanticError(18, exp->lineno, "This function is declare but not defined", name);
-                return NULL;
-            }
-            //TODO need fix type
-            return func->type->field->type;
+            SemanticError(18, exp->lineno, "This function is declare but not defined", name);
+            return NULL;
         }
+        //TODO need fix type
+        return func->type->field->type;
     }
     case Exp_IdLpRp:
     {
         char *name = nodes[sons[0]]->value;
+        if (SymbolContains(name, VAR) == 1)
+        {
+            SemanticError(11, exp->lineno, "Not a function", name);
+            return NULL;
+        }
         if (SymbolContains(name, FUNCTION) == 0)
         {
             SemanticError(2, exp->lineno, "Undefined function", name);
             return NULL;
         }
-        else
+        Symbol *func = SymbolGet(name, FUNCTION);
+        if (func->type->field->next != NULL)
+            SemanticError(9, exp->lineno, "The number or type of the actual participating parameters does not match during a function call", name);
+        if (SymbolGet(name, FUNCTION)->type->kind == UNDEF)
         {
-            if (SymbolContains(name, VAR) == 1)
-            {
-                SemanticError(11, exp->lineno, "Not a function", name);
-                return NULL;
-            }
-            Symbol *func = SymbolGet(name, FUNCTION);
-            if (func->type->field->next != NULL)
-                SemanticError(9, exp->lineno, "The number or type of the actual participating parameters does not match during a function call", name);
-            // if(func->type->field==NULL)
-            //     return NULL;
-            // else return
-            return func->type->field->type;
+            SemanticError(18, exp->lineno, "This function is declare but not defined", name);
+            return NULL;
         }
+        // if(func->type->field==NULL)
+        //     return NULL;
+        // else return
+        return func->type->field->type;
     }
     case Exp_ExpLbExpRb:
     {

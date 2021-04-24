@@ -1,7 +1,7 @@
-int a;
-int swap();
-int main()
-{
-    a = 1;
-    swap(a);
+int fun(int a);
+int fun(int b);
+int fun(int a, int b);
+int fun(int a){
+    a = a + 1;
+    return a;
 }

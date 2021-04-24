@@ -486,7 +486,7 @@ int FunDecAnalyze(int index, Type *type, TypeKind kind)
     {
     case FunDec_IDLPVarListRP:
     {
-        Field *field = VarListAnalyze(sons[2]);
+        Field *field = VarListAnalyze(sons[2], kind);
         Field *field_ = malloc(sizeof(Field));
         field_->name = "RETURN";
         field_->type = type;
@@ -513,7 +513,7 @@ int FunDecAnalyze(int index, Type *type, TypeKind kind)
     }
 }
 
-Field *VarListAnalyze(int index)
+Field *VarListAnalyze(int index, TypeKind func_type)
 {
     ASTNode *var_list = nodes[index];
     DebugPrintNameType(var_list);
@@ -522,19 +522,51 @@ Field *VarListAnalyze(int index)
     {
     case VarList_ParamDecCOMMAVarList:
     {
-        Field *field = ParamDecAnalyze(sons[0]);
-        Field *field_ = VarListAnalyze(sons[2]);
+        Field *field = ParamDecAnalyze(sons[0], func_type);
+        Field *field_ = VarListAnalyze(sons[2], func_type);
         field->next = field_;
         return field;
     }
     case VarList_ParamDec:
-        return ParamDecAnalyze(sons[0]);
+        return ParamDecAnalyze(sons[0], func_type);
     default:
         break;
     }
 }
 
-Field *ParamDecAnalyze(int index)
+int UndefFuncParamAnalyze(int index, Type *type, Field *field)
+{
+    ASTNode *param = nodes[index];
+    DebugPrintNameType(param);
+    // printf("actually enter undef func param analyze\n");
+    int *sons = GetSon(param);
+    switch (param->type)
+    {
+    case VarDec_ID:
+    {
+        field->type = malloc(sizeof(Type));
+        *field->type = *type;
+        field->next = NULL;
+        break;
+    }
+    case VarDec_VarDecLbIntRb:
+    {
+        Type *type_ = malloc(sizeof(Type));
+        type_->value = LEFT;
+        type_->kind = ARRAY;
+        type_->array = malloc(sizeof(type_->array));
+        type_->array->type = malloc(sizeof(Type));
+        *type_->array->type = *type;
+        type_->array->size = IntAnalyze(sons[2]);
+        UndefFuncParamAnalyze(sons[0], type_, field);
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+Field *ParamDecAnalyze(int index, TypeKind func_type)
 {
     ASTNode *param_dec = nodes[index];
     DebugPrintNameType(param_dec);
@@ -543,7 +575,10 @@ Field *ParamDecAnalyze(int index)
     SpecifierAnalyze(sons[0], type);
     // printf("%s\n", type->struct_name);
     Field *field = malloc(sizeof(field));
-    VarDecAnalyze(sons[1], type, field, FUNCTION_PARAM);
+    if (func_type == DEF)
+        VarDecAnalyze(sons[1], type, field, FUNCTION_PARAM);
+    else
+        UndefFuncParamAnalyze(sons[1], type, field);
     return field;
 }
 
@@ -1011,7 +1046,10 @@ Type *ExpAnalyze(int index)
         }
         Symbol *func = SymbolGet(name, FUNCTION);
         if (FuncParamEqual(func->type->field->next, func_params) == 0)
+        {
             SemanticError(9, exp->lineno, "The number or type of the actual participating parameters does not match during a function call", name);
+            return NULL;
+        }
         if (SymbolGet(name, FUNCTION)->type->kind == UNDEF)
         {
             SemanticError(18, exp->lineno, "This function is declare but not defined", name);
@@ -1035,7 +1073,10 @@ Type *ExpAnalyze(int index)
         }
         Symbol *func = SymbolGet(name, FUNCTION);
         if (func->type->field->next != NULL)
+        {
             SemanticError(9, exp->lineno, "The number or type of the actual participating parameters does not match during a function call", name);
+            return NULL;
+        }
         if (SymbolGet(name, FUNCTION)->type->kind == UNDEF)
         {
             SemanticError(18, exp->lineno, "This function is declare but not defined", name);

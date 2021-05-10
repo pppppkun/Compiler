@@ -24,7 +24,13 @@ void insert_function(char *function_name)
     free(code);
 }
 
-
+void insert_param(char* function_name){
+    Symbol * s = SymbolGet(function_name, FUNCTION);
+    if(IR_DEBUG)
+    {
+        if(s!=NULL) printf("Get From Table Success!\n");
+    }
+}
 
 void gen_ir(int last_node)
 {
@@ -92,10 +98,49 @@ void translate_FunDec(int index)
     int *sons = GetSon(fun_dec);
     char *name = nodes[sons[0]]->value;
     insert_function(name);
+    switch (fun_dec->type)
+    {
+    case FunDec_IDLPVarListRP:
+        // translate_VarList(sons[2]);
+        insert_param(name);
+        break;
+
+    default:
+        break;
+    }
 }
-void translate_VarList(int);
-void translate_ParamDec(int);
-void translate_CompSt(int);
+
+void translate_CompSt(int index)
+{
+    ASTNode *comp_st = nodes[index];
+    DebugPrintNameType(comp_st);
+}
+
+// void translate_VarList(int index)
+// {
+//     ASTNode *var_list = nodes[index];
+//     DebugPrintNameType(var_list);
+//     int *sons = GetSon(var_list);
+//     switch (var_list->type)
+//     {
+//     case VarList_ParamDec:
+//         translate_ParamDec(sons[0]);
+//         break;
+//     case VarList_ParamDecCOMMAVarList:
+//         translate_ParamDec(sons[0]);
+//         translate_VarList(sons[2]);
+//         break;
+//     default:
+//         break;
+//     }
+// }
+// void translate_ParamDec(int index)
+// {
+//     ASTNode *param_dec = nodes[index];
+//     DebugPrintNameType(param_dec);
+//     int *sons = GetSon(param_dec);
+//     insert_param()
+// }
 void translate_StmtList(int);
 void translate_Stmt(int);
 void translate_DefList(int);

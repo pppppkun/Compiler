@@ -1,7 +1,7 @@
 #ifndef _IRGLOBAL_
 #define _IRGLOBAL_
 
-#define IR_DEBUG 1
+#define IR_DEBUG 0
 #define ExtDefList_ExtDefExtDefList 1
 #define ExtDef_SpecifierExtDecListSEMI 1
 #define ExtDef_SpecifierSEMI 2
@@ -173,5 +173,6 @@ InterCodes * now;
 void DebugPrintNameType(ASTNode *node);
 void DebugPrintNameValue(ASTNode *node);
 int *GetSon(ASTNode *node);
+Symbol *SymbolGet(char *name, SymbolKind kind);
 
 #endif

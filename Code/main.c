@@ -144,7 +144,7 @@ int main(int argc, char **argv)
     {
         //print_AST(nodes_point - 1, 0);
         semanticAnalyze(nodes_point - 1);
-        gen_ir(nodes_point - 1);
+        //gen_ir(nodes_point - 1);
     }
     return 0;
 }

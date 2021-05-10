@@ -1,7 +1,6 @@
-int fun(int a);
-int fun(int b);
-int fun(int a, int b);
-int fun(int a){
-    a = a + 1;
+int fun(int a) {
+    a = 1;
     return a;
 }
+
+int fun(int b);

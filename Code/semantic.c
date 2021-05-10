@@ -469,7 +469,7 @@ int FunDecAnalyze(int index, Type *type, TypeKind kind)
     {
         //TODO
         Symbol *func = SymbolGet(name, FUNCTION);
-        if (func->type->kind == DEF)
+        if (func->type->kind == DEF && kind == DEF)
         {
             SemanticError(4, fun_dec->lineno, "Redefined function", name);
             return 0;

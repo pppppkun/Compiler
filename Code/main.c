@@ -1,5 +1,6 @@
 #include "main.h"
 #include "semantic.h"
+#include "ir.h"
 long nums = 1000000;
 void my_debug(char *str, int line)
 {
@@ -143,6 +144,7 @@ int main(int argc, char **argv)
     {
         //print_AST(nodes_point - 1, 0);
         semanticAnalyze(nodes_point - 1);
+        gen_ir(nodes_point - 1);
     }
     return 0;
 }

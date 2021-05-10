@@ -2,5 +2,3 @@ int fun(int a) {
     a = 1;
     return a;
 }
-
-int fun(int b);

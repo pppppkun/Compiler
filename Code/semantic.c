@@ -2,7 +2,7 @@
 
 void DebugPrintNameType(ASTNode *node)
 {
-    if (SEMANTIC_DEBUG)
+    if (IR_DEBUG)
     {
         printf("%s %d %d\n", node->name, node->type, node->lineno);
     }
@@ -10,15 +10,29 @@ void DebugPrintNameType(ASTNode *node)
 
 void DebugPrintNameValue(ASTNode *node)
 {
-    if (SEMANTIC_DEBUG)
+    if (IR_DEBUG)
     {
         printf("%s %s\n", node->name, node->value);
     }
 }
 
+int *GetSon(ASTNode *node)
+{
+    int *sons = malloc(sizeof(int) * 10);
+    int index = 0;
+    sons[index++] = node->child;
+    ASTNode *child = nodes[sons[index - 1]];
+    while (child->brother != -1)
+    {
+        sons[index++] = child->brother;
+        child = nodes[sons[index - 1]];
+    }
+    return sons;
+}
+
 void DebugPrintSymbol()
 {
-    if (!SEMANTIC_DEBUG)
+    if (!IR_DEBUG)
         return;
     for (int i = 0; i < nodes_point; i++)
     {
@@ -228,20 +242,6 @@ unsigned int hash_pjw(char *name)
             val = (val ^ (i >> 12)) & (nodes_point - 1);
     }
     return val;
-}
-
-int *GetSon(ASTNode *node)
-{
-    int *sons = malloc(sizeof(int) * 10);
-    int index = 0;
-    sons[index++] = node->child;
-    ASTNode *child = nodes[sons[index - 1]];
-    while (child->brother != -1)
-    {
-        sons[index++] = child->brother;
-        child = nodes[sons[index - 1]];
-    }
-    return sons;
 }
 
 int SymbolInsert(Symbol *symbol)

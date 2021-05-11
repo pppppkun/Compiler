@@ -6,14 +6,14 @@ int label_index = 1;
 void insert_code(InterCode *code)
 {
     now->code = malloc(sizeof(InterCode));
-    *(now->code) = *code;
+    now->code = code;
     now->next = malloc(sizeof(InterCodes));
     now->next->prev = now;
     now = now->next;
     now->next = NULL;
     if (IR_DEBUG)
     {
-        printf("%d\n", now->prev->code->kind);
+        printf("%d\n", code->kind);
         printf("Insert Code Success\n");
     }
 }
@@ -109,7 +109,10 @@ void print_ir()
             printf("DEC v%d %d\n", code->u.dec.x->u.var_no, code->u.dec.size * 4);
             break;
         case ARG:
-            print_arg(code->u.args);
+            // print_arg(code->u.args);
+            printf("ARG ");
+            print_var_or_constant(code->u.arg);
+            printf("\n");
             break;
         case PARAM:
             print_param(code->u.param);
@@ -129,8 +132,8 @@ void print_ir()
         head = head->next;
     }
 }
-//need to reconsider;
-Operand *insert_variable(char *symbol_name, OperandKind kind)
+//need to reconsider
+Operand *insert_variable_by_name(char *symbol_name, OperandKind kind)
 {
     head->operand = malloc(sizeof(Operand));
     head->operand->kind = kind;
@@ -142,18 +145,55 @@ Operand *insert_variable(char *symbol_name, OperandKind kind)
     return o;
 }
 
+Operand *insert_variable_by_ope(Operand *operand, OperandKind kind)
+{
+    head->operand = operand;
+    head->operand->kind = kind;
+    head->name = random();
+    head->operand->u.var_no = v_index++;
+    head->next = malloc(sizeof(Variable));
+    head = head->next;
+    return operand;
+}
+
+Operand *get_variable(char *symbol_name)
+{
+    Variable *temp = symbol_to_operand->next;
+    while (temp != NULL && temp->operand != NULL)
+    {
+        if (strcmp(temp->name, symbol_name) == 0)
+            return temp->operand;
+        else
+            temp = temp->next;
+    }
+    return NULL;
+}
+
+Operand *get_constant(int value)
+{
+    Operand *constant = malloc(sizeof(Operand));
+    constant->kind = CONSTANT;
+    constant->u.value = value;
+    return constant;
+}
+
+int get_label()
+{
+    return label_index++;
+}
+
 void insert_function(char *function_name)
 {
     InterCode *code = malloc(sizeof(InterCode));
     code->kind = IR_FUNCTION;
     code->u.function_name = function_name;
     insert_code(code);
-    free(code);
+    // free(code);
 }
-//need to reconsider;
+
 void insert_param(char *function_name)
 {
-    //TODO ADD PARAM -> VAR
+
     Symbol *s = SymbolGet(function_name, FUNCTION);
     if (IR_DEBUG)
     {
@@ -168,21 +208,98 @@ void insert_param(char *function_name)
     Variable *param_ = malloc(sizeof(Variable));
     code->u.param = param_;
     param_->operand = malloc(sizeof(Operand));
-    while (param != NULL)
+    while (param != NULL )
     {
         if (IR_DEBUG)
         {
             printf("%s\n", param->name);
         }
-        Operand *o = insert_variable(param->name, VARIABLE);
+        Operand *o = insert_variable_by_name(param->name, VARIABLE);
+        
         param_->operand = o;
         param_->next = malloc(sizeof(Variable));
+        param_->next->operand = NULL;
+
         param_ = param_->next;
         param = param->next;
     }
     insert_code(code);
-    free(code);
+    // free(code);
 }
+
+void insert_arg(Operand *arg)
+{
+    InterCode* code = malloc(sizeof(InterCode));
+    code->kind=ARG;
+    code->u.arg=arg;
+    insert_code(code);
+}
+
+void insert_call(Operand *ret, char* name)
+{
+    InterCode * code = malloc(sizeof(InterCode));
+    code->kind = CALL;
+    code->u.call.function_name = name;
+    code->u.call.ret = ret;
+    insert_code(code);
+}
+
+void insert_assign(Operand *left, Operand *right)
+{
+    InterCode *code = malloc(sizeof(InterCode));
+    code->kind = ASSIGN;
+    code->u.assign.left = left;
+    code->u.assign.right = right;
+    insert_code(code);
+    // free(code);
+}
+
+void insert_label(int index)
+{
+    InterCode *code = malloc(sizeof(InterCode));
+    code->kind = LABEL;
+    code->u.label_index = index;
+    insert_code(code);
+}
+
+void insert_binop(Operand *result, Operand *left, Operand *right, char *binop)
+{
+    InterCode *code = malloc(sizeof(InterCode));
+    if (strcmp(binop, "PLUS") == 0)
+        code->kind = ADD;
+    if (strcmp(binop, "MINUS") == 0)
+        code->kind = SUB;
+    if (strcmp(binop, "STAR") == 0)
+        code->kind = MUL;
+    if (strcmp(binop, "DIV") == 0)
+        code->kind = DIV;
+    code->u.binop.op1 = left;
+    code->u.binop.op2 = right;
+    code->u.binop.result = result;
+    insert_code(code);
+}
+
+void insert_write(Operand *arg)
+{
+    InterCode *code = malloc(sizeof(InterCode));
+    code->kind = WRITE;
+    code->u.rw = arg;
+    insert_code(code);
+}
+
+void insert_read(Operand *arg)
+{
+    InterCode *code = malloc(sizeof(InterCode));
+    code->kind = READ;
+    code->u.rw = arg;
+    insert_code(code);
+}
+
+// void insert_AndOr(Operand *left, Operand *right, int flag)
+// {
+//     InterCode *code = malloc(sizeof(InterCode));
+//     code->kind =
+// }
 
 void gen_ir(int last_node)
 {
@@ -190,21 +307,28 @@ void gen_ir(int last_node)
     {
         printf("Enter IR Gen Function!\n");
     }
+    codes = malloc(sizeof(InterCodes));
+    now = malloc(sizeof(InterCodes));
+    codes->next = now;
+    now->prev = codes;
+    now->next = NULL;
+    symbol_to_operand = malloc(sizeof(Variable));
+    head = malloc(sizeof(Variable));
+    symbol_to_operand->next = head;
 
-    // translate_Program(last_node);
-
-    // codes = codes->next;
-    // if (IR_DEBUG)
-    // {
-    //     printf("Test IR\n");
-    // }
-    // while (codes != NULL && codes->code != NULL)
-    // {
-    //     printf("%d\n", codes->code->kind);
-    //     codes = codes->next;
-    // }
-
+    translate_Program(last_node);
     print_ir();
+    // codes = codes->next;
+    if (IR_DEBUG)
+    {
+        printf("Test IR\n");
+        symbol_to_operand = symbol_to_operand->next;
+        while (symbol_to_operand != NULL && symbol_to_operand->operand != NULL)
+        {
+            printf("name: %s variable: v%d\n", symbol_to_operand->name, symbol_to_operand->operand->u.var_no);
+            symbol_to_operand = symbol_to_operand->next;
+        }
+    }
 }
 
 void translate_Program(int index)
@@ -241,12 +365,9 @@ void translate_ExtDef(int index)
         break;
     }
 }
-//TODO
+
 void translate_FunDec(int index)
 {
-    // ASTNode *fun_dec = nodes[index];
-    // DebugPrintNameType(fun_dec);
-    // int *sons = GetSon(fun_dec);
     PROCESS(fun_dec);
     char *name = nodes[sons[0]]->value;
     insert_function(name);
@@ -285,7 +406,7 @@ void translate_Stmt(int index)
     switch (stmt->type)
     {
     case Stmt_ExpSEMI:
-        /* code */
+        translate_Exp(sons[0]);
         break;
     case Stmt_CompSt:
         translate_CompSt(sons[0]);
@@ -353,13 +474,19 @@ void translate_Dec(int index)
         translate_VarDec(sons[0]);
         break;
     case Dec_VarDecASSIGNOPExp:
-        translate_VarDec(sons[0]);
-        translate_Exp(sons[2]);
+    {
+        Operand *l = translate_VarDec(sons[0]);
+        Operand *r = translate_Exp(sons[2]);
+        r = malloc(sizeof(Operand));
+        r->kind = CONSTANT;
+        r->u.value = 1;
+        insert_assign(l, r);
+    }
     default:
         break;
     }
 }
-//TODO
+
 Operand *translate_VarDec(int index)
 {
     PROCESS(var_dec);
@@ -368,11 +495,9 @@ Operand *translate_VarDec(int index)
     case VarDec_ID:
     {
         char *name = nodes[sons[0]]->value;
-        Symbol *s = SymbolGet(name, VAR);
-
-        break;
+        return insert_variable_by_name(name, VARIABLE);
     }
-    case VarDec_VarDecLbIntRb:
+    case VarDec_VarDecLbIntRb: //don't consider.
     default:
         break;
     }
@@ -381,6 +506,141 @@ Operand *translate_VarDec(int index)
 Operand *translate_Exp(int index)
 {
     PROCESS(exp);
+    switch (exp->type)
+    {
+    case Exp_ExpAssignopExp:
+    {
+        Operand *l = translate_Exp(sons[0]);
+        Operand *r = translate_Exp(sons[2]);
+        insert_assign(l, r);
+        return l;
+    }
+    case Exp_ExpAndExp:
+    case Exp_ExpOrExp:
+    case Exp_ExpRelopExp:
+    case Exp_NotExp:
+    {
+        int true_label = get_label();
+        int false_label = get_label();
+        Operand *place = malloc(sizeof(Operand));
+        insert_variable_by_ope(place, VARIABLE);
+        insert_assign(place, get_constant(0));
+        translate_Cond(index, true_label, false_label);
+        insert_label(true_label);
+        insert_assign(place, get_constant(1));
+        insert_label(false_label);
+        return place;
+    }
+    case Exp_ExpPlusExp:
+    case Exp_ExpMinusExp:
+    case Exp_ExpStarExp:
+    case Exp_ExpDivExp:
+    {
+        Operand *left = translate_Exp(sons[0]);
+        Operand *right = translate_Exp(sons[2]);
+        Operand *result = malloc(sizeof(Operand));
+        insert_variable_by_ope(result, VARIABLE);
+        insert_binop(result, left, right, nodes[sons[1]]->name);
+        return result;
+    }
+    case Exp_LpExpRp:
+        break;
+    case Exp_MinusExp:
+    {
+        Operand *o = translate_Exp(sons[1]);
+        Operand *c = get_constant(0);
+        Operand *result = malloc(sizeof(Operand));
+        insert_binop(result, c, o, "MINUS");
+        return result;
+    }
+    case Exp_IdLpArgsRp:
+    {
+        if (strcmp(nodes[sons[0]]->value, "write") == 0)
+        {
+            Operand *arg = translate_Exp(nodes[sons[2]]->child);
+            insert_write(arg);
+            return get_constant(0);
+        }
+        translate_Args(sons[2]);
+        Operand *ret = malloc(sizeof(Operand));
+        ret = insert_variable_by_ope(ret, VARIABLE);
+        insert_call(ret, nodes[sons[0]]->value);
+        return ret;
+    }
+    case Exp_IdLpRp:
+    {
+        if (strcmp(nodes[sons[0]]->value, "read") == 0)
+        {
+            Operand *arg = malloc(sizeof(Operand));
+            insert_variable_by_ope(arg, VARIABLE);
+            insert_read(arg);
+            return arg;
+        }
+        Operand *ret = malloc(sizeof(Operand));
+        ret = insert_variable_by_ope(ret, VARIABLE);
+        insert_call(ret, nodes[sons[0]]->value);
+        return ret;
+    }
+    case Exp_ExpLbExpRb: //don't consider
+        break;
+    case Exp_ExpDotId://wait.
+    {
+        break;
+    }
+    case Exp_Id:
+    {
+        char *name = nodes[sons[0]]->value;
+        Operand *o = get_variable(name);
+        return o;
+    }
+    case Exp_Int:
+    {
+        Operand *o = malloc(sizeof(Operand));
+        o->kind = CONSTANT;
+        o->u.value = IntAnalyze(sons[0]);
+        return o;
+    }
+    default:
+        return NULL;
+    }
 }
-void translate_Cond(int, int, int);
-void translate_Args(int);
+//TODO
+void translate_Cond(int index, int true_label, int false_label)
+{
+    PROCESS(exp);
+    switch (exp->type)
+    {
+    case Exp_ExpAndExp:
+    {
+        int label = get_label();
+        translate_Cond(sons[0], label, false_label);
+        insert_label(label);
+        translate_Cond(sons[1], true_label, false_label);
+        break;
+    }
+
+    default:
+        break;
+    }
+}
+void translate_Args(int index)
+{
+    PROCESS(args);
+    Variable *narg = malloc(sizeof(Variable));
+    switch (args->type)
+    {
+    case Args_ExpCommaArgs:
+    {
+        translate_Args(sons[2]);
+        Operand *e = translate_Exp(sons[0]);
+        insert_arg(e);
+        break;
+    }
+    case Args_Exp:
+    {
+        Operand *e = translate_Exp(sons[0]);
+        insert_arg(e);
+        break;
+    }
+    }
+}

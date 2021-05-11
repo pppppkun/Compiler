@@ -208,7 +208,7 @@ struct InterCode
             Operand *x;
             int size;
         } dec;
-        Variable *args;
+        Operand *arg;
         struct
         {
             Operand *ret;
@@ -248,4 +248,7 @@ void DebugPrintNameValue(ASTNode *node);
 int *GetSon(ASTNode *node);
 Symbol *SymbolGet(char *name, SymbolKind kind);
 unsigned int hash_pjw(char *name);
+int IntAnalyze(int index);
+char *random();
+
 #endif

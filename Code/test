@@ -1,20 +1,14 @@
-int func(int z,int x, int c)
-{
-    return z;
-}
-int funcc(){
-    return 1;
-}
 int main() {
-    int b,c;
-    int a;
-    int d = 2;
-    int e = d;
+    int a = 0;
+    int b = 1;
+    if (a==b) {
+        a = 2;
+    }
+    a = 3;
     a = 0;
-    a = b + a;
-    a = -a;
-    b = read();
-    write(b);
-    a = func(a, b, c);
-    a = funcc();
+    while( a != 100)
+    {
+        a = a + 1;
+    }
+    return a;
 }

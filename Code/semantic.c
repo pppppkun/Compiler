@@ -1033,6 +1033,7 @@ Type *ExpAnalyze(int index)
     case Exp_IdLpArgsRp:
     {
         char *name = nodes[sons[0]]->value;
+        if(strcmp(name, "write") == 0) return NULL;
         Field *func_params = ArgsAnalyze(sons[2]);
         if (SymbolContains(name, VAR) == 1)
         {
@@ -1061,6 +1062,7 @@ Type *ExpAnalyze(int index)
     case Exp_IdLpRp:
     {
         char *name = nodes[sons[0]]->value;
+        if(strcmp(name, "read") == 0) return INT;
         if (SymbolContains(name, VAR) == 1)
         {
             SemanticError(11, exp->lineno, "Not a function", name);
@@ -1232,6 +1234,25 @@ int semanticAnalyze(int last_node)
         symbol_table[i] = malloc(sizeof(Symbol *) * nodes_point);
         symbol_table[i]->lineno = -1;
     }
+    Symbol* write = malloc(sizeof(Symbol));
+    write->type = malloc(sizeof(Type));
+    write->type->kind=DEF;
+    write->type->field = malloc(sizeof(Field));
+    write->type->field->next = malloc(sizeof(Field));
+    write->type->field->next->type = INT;
+    write->kind = FUNCTION;
+    write->name = "write";
+    SymbolInsert(write);
+    
+    Symbol* read = malloc(sizeof(Symbol));
+    read->type = malloc(sizeof(Type));
+    read->type->kind=DEF;
+    write->type->field = malloc(sizeof(Field));
+    write->type->field->type = INT;
+    read->kind = FUNCTION;
+    read->name = "read";
+    SymbolInsert(read);
+
     ProgramAnalyze(last_node);
     for (int i = 0; i < nodes_point; i++)
     {

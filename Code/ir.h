@@ -3,7 +3,7 @@
 #ifndef _IR_
 #define _IR_
 
-void gen_ir(int);
+void gen_ir(int, char*);
 void translate_Program (int);
 void translate_ExtDefList (int);
 void translate_ExtDef (int);

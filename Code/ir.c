@@ -11,31 +11,28 @@ void insert_code(InterCode *code)
     now->next->prev = now;
     now = now->next;
     now->next = NULL;
-    if (IR_DEBUG)
-    {
-        printf("%d\n", code->kind);
-        printf("Insert Code Success\n");
-    }
+    // printf("%d\n", code->kind);
+    // printf("Insert Code Success\n");
 }
 
-void print_var_or_constant(Operand *o)
+void print_var_or_constant(Operand *o, FILE *f)
 {
     if (o->kind == CONSTANT)
-        printf("#%d", o->u.value);
+        fprintf(f, "#%d", o->u.value);
     else
-        printf("v%d", o->u.var_no);
+        fprintf(f, "v%d", o->u.var_no);
 }
 
-void print_binop(InterCode *code, char binop)
+void print_binop(InterCode *code, char binop, FILE *f)
 {
     Operand *left = code->u.binop.op1;
     Operand *right = code->u.binop.op2;
     Operand *result = code->u.binop.result;
-    printf("v%d := ", result->u.var_no);
-    print_var_or_constant(left);
-    printf(" %c ", binop);
-    print_var_or_constant(right);
-    printf("\n");
+    fprintf(f, "v%d := ", result->u.var_no);
+    print_var_or_constant(left, f);
+    fprintf(f, " %c ", binop);
+    print_var_or_constant(right, f);
+    fprintf(f, "\n");
 }
 
 void print_arg(Variable *args)
@@ -47,16 +44,16 @@ void print_arg(Variable *args)
     }
 }
 
-void print_param(Variable *param)
+void print_param(Variable *param, FILE *f)
 {
     while (param != NULL && param->operand != NULL)
     {
-        printf("PARAM v%d\n", param->operand->u.var_no);
+        fprintf(f, "PARAM v%d\n", param->operand->u.var_no);
         param = param->next;
     }
 }
 
-void print_ir()
+void print_ir(FILE *f)
 {
     InterCodes *head = codes->next;
     while (head != NULL && head->code != NULL)
@@ -65,66 +62,69 @@ void print_ir()
         switch (code->kind)
         {
         case LABEL:
-            printf("LABEL label%d :\n", label_index);
+        {
+            fprintf(f, "LABEL label%d :\n", code->u.label_index);
             break;
+        }
         case IR_FUNCTION:
-            printf("FUNCTION %s :\n", head->code->u.function_name);
+            fprintf(f, "FUNCTION %s :\n", head->code->u.function_name);
             break;
         case ASSIGN:
         {
             Operand *left = code->u.assign.left;
             Operand *right = code->u.assign.right;
-            printf("v%d := ", left->u.var_no);
-            print_var_or_constant(right);
-            printf("\n");
+            fprintf(f, "v%d := ", left->u.var_no);
+            print_var_or_constant(right, f);
+            fprintf(f, "\n");
             break;
         }
         case ADD:
-            print_binop(code, '+');
+            print_binop(code, '+', f);
             break;
         case SUB:
-            print_binop(code, '-');
+            print_binop(code, '-', f);
             break;
         case MUL:
-            print_binop(code, '*');
+            print_binop(code, '*', f);
             break;
         case DIV:
-            print_binop(code, '/');
+            print_binop(code, '/', f);
             break;
         case GOTO:
-            printf("GOTO label%d\n", code->u.label_index);
+            fprintf(f, "GOTO label%d\n", code->u.label_index);
+            break;
         case IF_GOTO:
-            printf("IF ");
-            print_var_or_constant(code->u.if_go.op1);
-            printf(" %s ", code->u.if_go.relop);
-            print_var_or_constant(code->u.if_go.op2);
-            printf(" GOTO label%d\n", code->u.if_go.label_index);
+            fprintf(f, "IF ");
+            print_var_or_constant(code->u.if_go.op1, f);
+            fprintf(f, " %s ", code->u.if_go.relop);
+            print_var_or_constant(code->u.if_go.op2, f);
+            fprintf(f, " GOTO label%d\n", code->u.if_go.label_index);
             break;
         case RETURN:
-            printf("RETURN ");
-            print_var_or_constant(code->u.ret);
-            printf("\n");
+            fprintf(f, "RETURN ");
+            print_var_or_constant(code->u.ret, f);
+            fprintf(f, "\n");
             break;
         case DEC:
-            printf("DEC v%d %d\n", code->u.dec.x->u.var_no, code->u.dec.size * 4);
+            fprintf(f, "DEC v%d %d\n", code->u.dec.x->u.var_no, code->u.dec.size * 4);
             break;
         case ARG:
             // print_arg(code->u.args);
-            printf("ARG ");
-            print_var_or_constant(code->u.arg);
-            printf("\n");
+            fprintf(f, "ARG ");
+            print_var_or_constant(code->u.arg, f);
+            fprintf(f, "\n");
             break;
         case PARAM:
-            print_param(code->u.param);
+            print_param(code->u.param, f);
             break;
         case CALL:
-            printf("v%d := CALL %s\n", code->u.call.ret->u.var_no, code->u.call.function_name);
+            fprintf(f, "v%d := CALL %s\n", code->u.call.ret->u.var_no, code->u.call.function_name);
             break;
         case READ:
-            printf("READ v%d\n", code->u.rw->u.var_no);
+            fprintf(f, "READ v%d\n", code->u.rw->u.var_no);
             break;
         case WRITE:
-            printf("WRITE v%d\n", code->u.rw->u.var_no);
+            fprintf(f, "WRITE v%d\n", code->u.rw->u.var_no);
             break;
         default:
             break;
@@ -208,14 +208,14 @@ void insert_param(char *function_name)
     Variable *param_ = malloc(sizeof(Variable));
     code->u.param = param_;
     param_->operand = malloc(sizeof(Operand));
-    while (param != NULL )
+    while (param != NULL)
     {
         if (IR_DEBUG)
         {
             printf("%s\n", param->name);
         }
         Operand *o = insert_variable_by_name(param->name, VARIABLE);
-        
+
         param_->operand = o;
         param_->next = malloc(sizeof(Variable));
         param_->next->operand = NULL;
@@ -229,15 +229,15 @@ void insert_param(char *function_name)
 
 void insert_arg(Operand *arg)
 {
-    InterCode* code = malloc(sizeof(InterCode));
-    code->kind=ARG;
-    code->u.arg=arg;
+    InterCode *code = malloc(sizeof(InterCode));
+    code->kind = ARG;
+    code->u.arg = arg;
     insert_code(code);
 }
 
-void insert_call(Operand *ret, char* name)
+void insert_call(Operand *ret, char *name)
 {
-    InterCode * code = malloc(sizeof(InterCode));
+    InterCode *code = malloc(sizeof(InterCode));
     code->kind = CALL;
     code->u.call.function_name = name;
     code->u.call.ret = ret;
@@ -295,13 +295,40 @@ void insert_read(Operand *arg)
     insert_code(code);
 }
 
+void insert_return(Operand *ret)
+{
+    InterCode *code = malloc(sizeof(InterCode));
+    code->kind = RETURN;
+    code->u.ret = ret;
+    insert_code(code);
+}
+
+void insert_goto(int label_index)
+{
+    InterCode *code = malloc(sizeof(InterCode));
+    code->kind = GOTO;
+    code->u.label_index = label_index;
+    insert_code(code);
+}
+
+void insert_ifgoto(Operand *o1, Operand *o2, char *relop, int label_index)
+{
+    InterCode *code = malloc(sizeof(InterCode));
+    code->kind = IF_GOTO;
+    code->u.if_go.label_index = label_index;
+    code->u.if_go.op1 = o1;
+    code->u.if_go.op2 = o2;
+    code->u.if_go.relop = relop;
+    insert_code(code);
+}
+
 // void insert_AndOr(Operand *left, Operand *right, int flag)
 // {
 //     InterCode *code = malloc(sizeof(InterCode));
 //     code->kind =
 // }
 
-void gen_ir(int last_node)
+void gen_ir(int last_node, char *file_name)
 {
     if (IR_DEBUG)
     {
@@ -317,7 +344,8 @@ void gen_ir(int last_node)
     symbol_to_operand->next = head;
 
     translate_Program(last_node);
-    print_ir();
+    FILE *f = fopen(file_name, "w+");
+    print_ir(f);
     // codes = codes->next;
     if (IR_DEBUG)
     {
@@ -412,21 +440,45 @@ void translate_Stmt(int index)
         translate_CompSt(sons[0]);
         break;
     case Stmt_ReturnExpSEMI:
-        translate_Exp(sons[1]);
+        insert_return(translate_Exp(sons[1]));
         break;
     case Stmt_IfLpExpRpStmt:
-        translate_Exp(sons[2]);
+    {
+        int true_label = get_label();
+        int false_label = get_label();
+        translate_Cond(sons[2], true_label, false_label);
+        insert_label(true_label);
         translate_Stmt(sons[4]);
+        insert_label(false_label);
         break;
+    }
     case Stmt_IfLpExpRpStmtElseStmt:
-        translate_Exp(sons[2]);
+    {
+        int true_label = get_label();
+        int false_label = get_label();
+        int out_label = get_label();
+        translate_Cond(sons[2], true_label, false_label);
+        insert_label(true_label);
         translate_Stmt(sons[4]);
+        insert_goto(out_label);
+        insert_label(false_label);
         translate_Stmt(sons[6]);
+        insert_label(out_label);
         break;
+    }
     case Stmt_WhileLpExpRpStmt:
-        translate_Exp(sons[2]);
+    {
+        int boolean_label = get_label();
+        int stmt_label = get_label();
+        int out_label = get_label();
+        insert_label(boolean_label);
+        translate_Cond(sons[2], stmt_label, out_label);
+        insert_label(stmt_label);
         translate_Stmt(sons[4]);
+        insert_goto(boolean_label);
+        insert_label(out_label);
         break;
+    }
     default:
         break;
     }
@@ -477,9 +529,6 @@ void translate_Dec(int index)
     {
         Operand *l = translate_VarDec(sons[0]);
         Operand *r = translate_Exp(sons[2]);
-        r = malloc(sizeof(Operand));
-        r->kind = CONSTANT;
-        r->u.value = 1;
         insert_assign(l, r);
     }
     default:
@@ -583,7 +632,7 @@ Operand *translate_Exp(int index)
     }
     case Exp_ExpLbExpRb: //don't consider
         break;
-    case Exp_ExpDotId://wait.
+    case Exp_ExpDotId: //wait.
     {
         break;
     }
@@ -618,9 +667,35 @@ void translate_Cond(int index, int true_label, int false_label)
         translate_Cond(sons[1], true_label, false_label);
         break;
     }
-
-    default:
+    case Exp_ExpOrExp:
+    {
+        int label = get_label();
+        translate_Cond(sons[0], true_label, label);
+        insert_label(label);
+        translate_Cond(sons[1], true_label, false_label);
         break;
+    }
+    case Exp_ExpRelopExp:
+    {
+        Operand *o1 = translate_Exp(sons[0]);
+        Operand *o2 = translate_Exp(sons[2]);
+        char *relop = nodes[sons[1]]->value;
+        insert_ifgoto(o1, o2, relop, true_label);
+        insert_goto(false_label);
+        break;
+    }
+    case Exp_NotExp:
+    {
+        translate_Cond(index, false_label, true_label);
+        break;
+    }
+    default:
+    {
+        Operand *o = translate_Exp(index);
+        insert_ifgoto(o, get_constant(0), "!=", true_label);
+        insert_goto(false_label);
+        break;
+    }
     }
 }
 void translate_Args(int index)

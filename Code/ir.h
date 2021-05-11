@@ -8,8 +8,6 @@ void translate_Program (int);
 void translate_ExtDefList (int);
 void translate_ExtDef (int);
 void translate_FunDec (int);
-void translate_VarList (int);
-void translate_ParamDec (int);
 void translate_CompSt (int);
 void translate_StmtList (int);
 void translate_Stmt (int);

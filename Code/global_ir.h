@@ -1,7 +1,7 @@
 #ifndef _IRGLOBAL_
 #define _IRGLOBAL_
 
-#define IR_DEBUG 0
+#define IR_DEBUG 1
 #define ExtDefList_ExtDefExtDefList 1
 #define ExtDef_SpecifierExtDecListSEMI 1
 #define ExtDef_SpecifierSEMI 2
@@ -56,6 +56,12 @@
 #define Args_ExpCommaArgs 1
 #define Args_Exp 2
 #define ANONYMITY "!@#$^&&"
+// ASTNode * dec = nodes[index];
+//     DebugPrintNameType(dec);
+#define PROCESS(node)             \
+    ASTNode *node = nodes[index]; \
+    DebugPrintNameType(node);     \
+    int *sons = node->type != -1 ? GetSon(node) : NULL;
 
 typedef struct Type Type;
 typedef struct Field Field;
@@ -134,36 +140,103 @@ struct Symbol
 Symbol **symbol_table;
 int *function_index;
 
-
 typedef struct Operand Operand;
 typedef struct InterCode InterCode;
 typedef struct InterCodes InterCodes;
+typedef struct Variable Variable;
+typedef enum OperandKind OperandKind;
 
-struct Operand {
-    enum {VARIABLE, CONSTANT, ADDRESS} kind;
-    union {
+enum OperandKind
+{
+    VARIABLE,
+    CONSTANT,
+    ADDRESS
+};
+struct Operand
+{
+    OperandKind kind;
+    union
+    {
         int var_no;
         int value;
     } u;
 };
 
-struct InterCode {
-    enum {LABEL, IR_FUNCTION, ASSIGN, ADD, SUB, MUL, DIV, GOTO, IF_GOTO, RETURN, DEC, ARG, CALL, PARAM, READ, WRITE} kind;
-    union {
-        char* function_name;
-        struct {Operand * right, left;} assign;
-        struct {Operand * result, op1, op2;} binop;
-    }u;
+struct InterCode
+{
+    enum
+    {
+        LABEL,
+        IR_FUNCTION,
+        ASSIGN,
+        ADD,
+        SUB,
+        MUL,
+        DIV,
+        GOTO,
+        IF_GOTO,
+        RETURN,
+        DEC,
+        ARG,
+        CALL,
+        PARAM,
+        READ,
+        WRITE
+    } kind;
+    union
+    {
+        char *function_name;
+        int label_index;
+        struct
+        {
+            Operand *right, *left;
+        } assign;
+        struct
+        {
+            Operand *result, *op1, *op2;
+        } binop;
+        Variable *param;
+        struct
+        {
+            Operand *op1, *op2;
+            char *relop;
+            int label_index;
+        } if_go;
+        Operand *ret;
+        struct
+        {
+            Operand *x;
+            int size;
+        } dec;
+        Variable *args;
+        struct
+        {
+            Operand *ret;
+            char *function_name;
+        } call;
+        Operand *rw;
+    } u;
 };
 
-struct InterCodes {
-    InterCode * code;
-    InterCodes * prev;
-    InterCodes * next;
+struct InterCodes
+{
+    InterCode *code;
+    InterCodes *prev;
+    InterCodes *next;
 };
 
-InterCodes * codes;
-InterCodes * now;
+struct Variable
+{
+    Operand *operand;
+    char *name;
+    Variable *next;
+    Variable *prev;
+};
+
+Variable *symbol_to_operand;
+Variable *head;
+InterCodes *codes;
+InterCodes *now;
 
 #endif
 
@@ -174,5 +247,5 @@ void DebugPrintNameType(ASTNode *node);
 void DebugPrintNameValue(ASTNode *node);
 int *GetSon(ASTNode *node);
 Symbol *SymbolGet(char *name, SymbolKind kind);
-
+unsigned int hash_pjw(char *name);
 #endif

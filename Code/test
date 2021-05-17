@@ -1,14 +1,14 @@
-int main() {
-    int a = 0;
-    int b = 1;
-    if (a==b) {
-        a = 2;
+int main()
+{
+    int a, b, c;
+    a = 1;
+    b = 2;
+    c  =10;
+    if( a + b > c && b + c > a) {
+        a = 3;
     }
-    a = 3;
-    a = 0;
-    while( a != 100)
-    {
-        a = a + 1;
+    else {
+        a = 4;
     }
-    return a;
+    return 0;
 }

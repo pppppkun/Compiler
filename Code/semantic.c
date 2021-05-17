@@ -919,6 +919,7 @@ int VarDecAnalyze(int index, Type *type, Field *field, SymbolKind kind)
                 field->next = NULL;
                 symbol->kind = kind;
                 symbol->name = name;
+                symbol->type = type;
             }
             if (kind == FUNCTION_PARAM)
             {

@@ -150,7 +150,8 @@ enum OperandKind
 {
     VARIABLE,
     CONSTANT,
-    ADDRESS
+    ADDRESS,
+    ADDRESS_VARIABLE
 };
 struct Operand
 {
@@ -173,6 +174,9 @@ struct InterCode
         SUB,
         MUL,
         DIV,
+        ADDR_ASSIGN,
+        ASSIGN_DEREFERENCE,
+        DEREFERENCE_ASSIGN,
         GOTO,
         IF_GOTO,
         RETURN,

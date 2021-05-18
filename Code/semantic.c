@@ -315,6 +315,7 @@ Symbol *SymbolGet(char *name, SymbolKind kind)
     // return &symbol_table[index];
     unsigned int index = hash_pjw(name);
     Symbol *symbol = symbol_table[index];
+    if(symbol->lineno == -1) return NULL;
     for (;;)
     {
         if (strcmp(name, symbol->name) == 0 && symbol->kind == kind)

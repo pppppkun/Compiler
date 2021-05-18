@@ -1,7 +1,7 @@
 #ifndef _IRGLOBAL_
 #define _IRGLOBAL_
 
-#define IR_DEBUG 0
+#define IR_DEBUG 1
 #define ExtDefList_ExtDefExtDefList 1
 #define ExtDef_SpecifierExtDecListSEMI 1
 #define ExtDef_SpecifierSEMI 2
@@ -212,7 +212,11 @@ struct InterCode
             Operand *x;
             int size;
         } dec;
-        Operand *arg;
+        struct
+        {
+            TypeKind kind;
+            Operand *arg;
+        }arg;
         struct
         {
             Operand *ret;

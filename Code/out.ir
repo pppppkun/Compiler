@@ -1,0 +1,107 @@
+FUNCTION mod :
+PARAM v1
+PARAM v2
+v3 := v1 / v2
+v4 := v3 * v2
+v5 := v1 - v4
+RETURN v5
+FUNCTION gcd :
+PARAM v6
+PARAM v7
+IF v6 == #0 GOTO label1
+GOTO label2
+LABEL label1 :
+RETURN v7
+LABEL label2 :
+ARG v6
+ARG v6
+ARG v7
+v8 := CALL mod
+ARG v8
+v9 := CALL gcd
+RETURN v9
+FUNCTION lcm :
+PARAM v10
+PARAM v11
+v12 := v10 * v11
+ARG v11
+ARG v10
+v13 := CALL gcd
+v14 := v12 / v13
+RETURN v14
+FUNCTION main :
+v19 := #0
+DEC v20 200
+DEC v21 200
+READ v22
+v15 := v22
+v16 := #0
+LABEL label3 :
+IF v16 < v15 GOTO label4
+GOTO label5
+LABEL label4 :
+v24 := v16 * #4
+v23 := &v20 + v24
+READ v25
+*v23 := v25
+v27 := v16 * #4
+v26 := &v21 + v27
+READ v28
+*v26 := v28
+v29 := v16 + #1
+v16 := v29
+GOTO label3
+LABEL label5 :
+v31 := #0 * #4
+v30 := &v21 + v31
+v18 := *v30
+v16 := #1
+LABEL label6 :
+IF v16 < v15 GOTO label7
+GOTO label8
+LABEL label7 :
+v33 := v16 * #4
+v32 := &v21 + v33
+ARG v32
+ARG v18
+v34 := CALL lcm
+v18 := v34
+v35 := v16 + #1
+v16 := v35
+GOTO label6
+LABEL label8 :
+v16 := #0
+LABEL label9 :
+IF v16 < v15 GOTO label10
+GOTO label11
+LABEL label10 :
+v37 := v16 * #4
+v36 := &v20 + v37
+v39 := v16 * #4
+v38 := &v21 + v39
+v40 := v18 / *v38
+v41 := *v36 * v40
+v42 := v19 + v41
+v19 := v42
+v43 := v16 + #1
+v16 := v43
+GOTO label9
+LABEL label11 :
+ARG v18
+ARG v19
+v44 := CALL gcd
+v17 := v44
+v45 := v19 / v17
+v19 := v45
+v46 := v18 / v17
+v18 := v46
+IF v18 == #1 GOTO label12
+GOTO label13
+LABEL label12 :
+WRITE v19
+GOTO label14
+LABEL label13 :
+WRITE v19
+WRITE v18
+LABEL label14 :
+RETURN #0

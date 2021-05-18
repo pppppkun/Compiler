@@ -17,27 +17,50 @@ void insert_code(InterCode *code)
     // printf("Insert Code Success\n");
 }
 
+char *find_v(int v)
+{
+    Variable *temp = symbol_to_operand->next;
+    while (temp != NULL && temp->operand != NULL)
+    {
+        if (temp->operand->kind != CONSTANT && v == temp->operand->u.var_no)
+            return temp->name;
+        else
+            temp = temp->next;
+    }
+    return NULL;
+}
+
 void print_var_or_constant_or_addr(Operand *o, FILE *f, int flag)
 {
     if (o->kind == CONSTANT)
         fprintf(f, "#%d", o->u.value);
     else if (o->kind == ADDRESS)
     {
-        //1 right
-        //other left
-        // if (flag == 1)
-        // {
-        //     fprintf(f, "&v%d", o->u.var_no);
-        // }
-        // else if (flag == 0)
-        // {
-        //     fprintf(f, "*v%d", o->u.var_no);
-        // }
-        // else
-        // {
-        //     fprintf(f, "v%d", o->u.var_no);
-        // }
         fprintf(f, "v%d", o->u.var_no);
+    }
+    else
+        fprintf(f, "v%d", o->u.var_no);
+}
+
+void print_binop_(Operand *o, FILE *f, int flag)
+{
+    if (o->kind == CONSTANT)
+        fprintf(f, "#%d", o->u.value);
+    else if (o->kind == ADDRESS)
+    {
+        fprintf(f, "*v%d", o->u.var_no);
+    }
+    else
+        fprintf(f, "v%d", o->u.var_no);
+}
+
+void if_else_print(Operand *o, FILE *f)
+{
+    if (o->kind == CONSTANT)
+        fprintf(f, "#%d", o->u.value);
+    else if (o->kind == ADDRESS)
+    {
+        fprintf(f, "*v%d", o->u.var_no);
     }
     else
         fprintf(f, "v%d", o->u.var_no);
@@ -48,22 +71,39 @@ void print_binop(InterCode *code, char binop, FILE *f)
     Operand *left = code->u.binop.op1;
     Operand *right = code->u.binop.op2;
     Operand *result = code->u.binop.result;
-
+    if (result->kind == left->kind && left->kind != CONSTANT)
+    {
+        fprintf(f, "v%d := v%d %c ", result->u.var_no, left->u.var_no, binop);
+        print_binop_(right, f, 1);
+        fprintf(f, "\n");
+    }
+    else
+    {
+        print_binop_(result, f, 0);
+        fprintf(f, " := ");
+        print_binop_(left, f, 1);
+        fprintf(f, " %c ", binop);
+        print_binop_(right, f, 1);
+        fprintf(f, "\n");
+    }
     // fprintf(f, "v%d := ", result->u.var_no);
-    print_var_or_constant_or_addr(result, f, 0);
-    fprintf(f, " := ");
-    print_var_or_constant_or_addr(left, f, 1);
-    fprintf(f, " %c ", binop);
-    print_var_or_constant_or_addr(right, f, 1);
-    fprintf(f, "\n");
 }
 
-void print_arg(Variable *args)
+void print_arg(Operand *arg, TypeKind kind, FILE *f)
 {
-    while (args != NULL && args->operand != NULL)
+    if (kind == STRUCTURE)
     {
-        printf("ARG v%d\n", args->operand->u.var_no);
-        args = args->prev;
+        if (arg->kind == VARIABLE)
+            fprintf(f, "&v%d", arg->u.var_no);
+        if (arg->kind == ADDRESS)
+            fprintf(f, "v%d", arg->u.var_no);
+    }
+    else
+    {
+        if (arg->kind == CONSTANT)
+            fprintf(f, "#%d", arg->u.value);
+        else
+            fprintf(f, "v%d", arg->u.var_no);
     }
 }
 
@@ -124,12 +164,21 @@ void print_ir(FILE *f)
             Operand *right = code->u.binop.op1;
             Operand *constant = code->u.binop.op2;
             fprintf(f, "v%d := ", left->u.var_no);
-            if (right->kind == ADDRESS_VARIABLE || right->kind == VARIABLE)
+            if (right->kind == VARIABLE)
             {
                 fprintf(f, "&v%d", right->u.var_no);
             }
             if (constant != NULL)
-                fprintf(f, " + #%d", constant->u.var_no);
+            {
+                if (constant->kind == CONSTANT)
+                {
+                    fprintf(f, " + #%d", constant->u.value);
+                }
+                if (constant->kind == VARIABLE)
+                {
+                    fprintf(f, " + v%d", constant->u.var_no);
+                }
+            }
             fprintf(f, "\n");
             break;
         }
@@ -145,7 +194,12 @@ void print_ir(FILE *f)
             Operand *left = code->u.assign.left;
             Operand *right = code->u.assign.right;
             fprintf(f, "*v%d := ", left->u.var_no);
-            print_var_or_constant_or_addr(right, f, 0);
+            if (right->kind == VARIABLE)
+                fprintf(f, "v%d", right->u.var_no);
+            else if (right->kind == CONSTANT)
+                fprintf(f, "#%d", right->u.value);
+            else
+                fprintf(f, "*v%d", right->u.var_no);
             fprintf(f, "\n");
             break;
         }
@@ -154,9 +208,9 @@ void print_ir(FILE *f)
             break;
         case IF_GOTO:
             fprintf(f, "IF ");
-            print_var_or_constant_or_addr(code->u.if_go.op1, f, 0);
+            if_else_print(code->u.if_go.op1, f);
             fprintf(f, " %s ", code->u.if_go.relop);
-            print_var_or_constant_or_addr(code->u.if_go.op2, f, 0);
+            if_else_print(code->u.if_go.op2, f);
             fprintf(f, " GOTO label%d\n", code->u.if_go.label_index);
             break;
         case RETURN:
@@ -170,7 +224,9 @@ void print_ir(FILE *f)
         case ARG:
             // print_arg(code->u.args);
             fprintf(f, "ARG ");
-            print_var_or_constant_or_addr(code->u.arg, f, 1);
+            //TODO
+            print_arg(code->u.arg.arg, code->u.arg.kind, f);
+            // print_var_or_constant_or_addr(code->u.arg, f, 1);
             fprintf(f, "\n");
             break;
         case PARAM:
@@ -183,7 +239,11 @@ void print_ir(FILE *f)
             fprintf(f, "READ v%d\n", code->u.rw->u.var_no);
             break;
         case WRITE:
-            fprintf(f, "WRITE v%d\n", code->u.rw->u.var_no);
+            fprintf(f, "WRITE ");
+            if (code->u.rw->kind == ADDRESS)
+                fprintf(f, "*");
+            print_var_or_constant_or_addr(code->u.rw, f, 0);
+            fprintf(f, "\n");
             break;
         default:
             break;
@@ -291,8 +351,22 @@ void insert_arg(Operand *arg)
 {
     InterCode *code = malloc(sizeof(InterCode));
     code->kind = ARG;
-    code->u.arg = arg;
-    insert_code(code);
+    if (arg->kind == CONSTANT)
+    {
+        code->u.arg.arg = arg;
+        insert_code(code);
+    }
+    else
+    {
+        char *name = find_v(arg->u.var_no);
+        code->u.arg.arg = arg;
+        Symbol *s = SymbolGet(name, VAR);
+        if (s == NULL)
+            code->u.arg.kind = 0;
+        else
+            code->u.arg.kind = SymbolGet(name, VAR)->type->kind;
+        insert_code(code);
+    }
 }
 
 void insert_call(Operand *ret, char *name)
@@ -409,6 +483,31 @@ void insert_address_assign(Operand *left, Operand *right, int index)
     }
     insert_code(code);
 }
+
+void insert_array(Operand *left, Operand *right, Operand *index)
+{
+    InterCode *code = malloc(sizeof(InterCode));
+    code->kind = ADDR_ASSIGN;
+    if (index == NULL)
+    {
+        code->u.binop.op1 = right;
+        code->u.binop.op2 = NULL;
+        code->u.binop.result = left;
+    }
+    else if (index->kind == CONSTANT)
+    {
+        code->u.binop.op1 = right;
+        code->u.binop.op2 = index;
+        code->u.binop.result = left;
+    }
+    else if (index->kind == VARIABLE)
+    {
+        code->u.binop.op1 = right;
+        code->u.binop.op2 = index;
+        code->u.binop.result = left;
+    }
+    insert_code(code);
+}
 //v = *v;
 void insert_assign_dereference(Operand *left, Operand *right)
 {
@@ -428,14 +527,27 @@ void insert_dereference_assign(Operand *left, Operand *right)
     insert_code(code);
 }
 
+
+// without * 4;
 int sizeofStruct(Field *field)
 {
     int size = 0;
     while (field != NULL)
     {
-        if (field->type->kind != STRUCTURE)
+        if (field->type->kind == BASIC)
         {
             size++;
+        }
+        else if (field->type->kind == ARRAY)
+        {
+            if (field->type->array->type->kind == BASIC)
+            {
+                size += field->type->array->size;
+            }
+            else
+            {
+                size += (field->type->array->size) * sizeofStruct(field->type->array->type->field);
+            }
         }
         else
         {
@@ -446,8 +558,23 @@ int sizeofStruct(Field *field)
     return size;
 }
 
+int sizeofArrayItem(char *name)
+{
+    Symbol *s = SymbolGet(name, VAR);
+    if(s == NULL) s = SymbolGet(name, FIELD);
+    if (s->type->array->type->kind == BASIC)
+    {
+        return 4;
+    }
+    else
+    {
+        return sizeofStruct(s->type->array->type->field) * 4;
+    }
+}
+
 int cal_index(char *field)
 {
+    printf("cal index %s\n", field);
     Field *struct_field = now_stack->type->field;
     int size = 0;
     while (struct_field != NULL)
@@ -456,11 +583,15 @@ int cal_index(char *field)
             return size;
         else
         {
-            if (struct_field->type->kind != STRUCTURE)
-                size++;
+            if (struct_field->type->kind == BASIC)
+                size+=4;
+            else if (struct_field->type->kind == ARRAY)
+            {
+                size += struct_field->type->array->size * sizeofArrayItem(struct_field->name);
+            }
             else
             {
-                size += sizeofStruct(struct_field);
+                size += sizeofStruct(struct_field) * 4;
             }
         }
         struct_field = struct_field->next;
@@ -503,6 +634,23 @@ void gen_ir(int last_node, char *file_name)
         }
     }
 }
+
+char *get_exp_name(int index)
+{
+    PROCESS(exp);
+    switch (exp->type)
+    {
+    case Exp_Id:
+        return nodes[sons[0]]->value;
+    case Exp_ExpLbExpRb:
+    {
+        return get_exp_name(sons[0]);
+    }
+    default:
+        break;
+    }
+}
+
 
 void translate_Program(int index)
 {
@@ -697,7 +845,19 @@ Operand *translate_VarDec(int index)
         }
         return insert_variable_by_name(name, VARIABLE);
     }
-    case VarDec_VarDecLbIntRb: //don't consider.
+    case VarDec_VarDecLbIntRb:
+    {
+        Operand *o = translate_VarDec(sons[0]);
+        int size = IntAnalyze(sons[2]);
+        char *array_name = nodes[nodes[sons[0]]->child]->value;
+        Symbol *s = SymbolGet(array_name, VAR);
+        if (s->type->array->type->kind == STRUCTURE)
+        {
+            size = size * sizeofStruct(s->type->array->type->field);
+        }
+        insert_dec(o, size);
+        return o;
+    }
     default:
         break;
     }
@@ -788,100 +948,133 @@ Operand *translate_Exp(int index)
         insert_call(ret, nodes[sons[0]]->value);
         return ret;
     }
-    case Exp_ExpLbExpRb: //don't consider
-        break;
+    case Exp_ExpLbExpRb:
+    {
+        Operand *o1 = translate_Exp(sons[0]);
+        Operand *o2 = translate_Exp(sons[2]);
+        Operand *result = malloc(sizeof(Operand));
+        if (o1->kind == VARIABLE)
+        {
+            // the item of Array
+            int size = sizeofArrayItem(get_exp_name(sons[0]));
+            insert_variable_by_ope(result, ADDRESS);
+            Operand *o3 = malloc(sizeof(Operand));
+            insert_variable_by_ope(o3, VARIABLE);
+            insert_binop(o3, o2, get_constant(size), "STAR");
+            insert_array(result, o1, o3);
+        }
+        // if (o1->kind == ADDRESS)
+        // {
+        //     int size = sizeofArrayItem(get_exp_name(sons[0])) * 4;
+        //     insert_variable_by_ope(result, ADDRESS);
+        //     Operand *o3 = malloc(sizeof(Operand));
+        //     insert_variable_by_ope(o3, VARIABLE);
+        //     insert_binop(o3, o2, get_constant(size), "STAR");   
+        //     insert_array(result, o1, o3);
+        //     // insert_assign_dereference(result, temp);
+        // }
+        return result;
+    }
     case Exp_ExpDotId: //wait.
     {
         now_depth++;
         Operand *o = translate_Exp(sons[0]);
         char *field = nodes[sons[2]]->value;
-        if (nodes[sons[0]]->type == Exp_Id) // 递归到最里面
-        {
 
-            char *name = nodes[nodes[sons[0]]->child]->value;
-            printf("struct name: %s\n", name);
-            now_stack = SymbolGet(name, VAR);
-            now_size = 0;
-            // 不需要递归
-            if (now_depth == 1)
-            {
-                int index = cal_index(field);
-                now_depth = 0;
-                Operand *addr = malloc(sizeof(Operand));
-                if (o->kind == VARIABLE)
-                {
-                    insert_variable_by_ope(addr, ADDRESS);
-                    insert_address_assign(addr, o, index * 4);
-                }
-                if (o->kind == ADDRESS)
-                {
-                    insert_variable_by_ope(addr, VARIABLE);
-                    Operand *temp = malloc(sizeof(Operand));
-
-                    if (index == 0)
-                    {
-                        insert_assign_dereference(addr, o);
-                    }
-                    else
-                    {
-                        insert_variable_by_ope(temp, ADDRESS);
-                        insert_binop(temp, o, get_constant(index * 4), "PLUS");
-                        insert_assign_dereference(addr, temp);
-                    }
-                }
-                return addr;
-            }
-            else
-            {
-                now_size += cal_index(field);
-                Symbol *field_symbol = SymbolGet(field, FIELD);
-                if (field_symbol->type->kind == STRUCTURE)
-                    now_stack = field_symbol;
-            }
-            return o;
-        }
-        else
-        {
-            //这里需要能判断到了结构体的最外层
-            now_depth--;
-            Symbol *field_symbol = SymbolGet(field, FIELD);
-            now_size += cal_index(field);
-            if (now_depth == 1)
-            {
-                now_depth = 0;
-                Operand *addr = malloc(sizeof(Operand));
-                if (o->kind == VARIABLE)
-                {
-                    insert_variable_by_ope(addr, ADDRESS);
-                    insert_address_assign(addr, o, now_size * 4);
-                }
-                if (o->kind == ADDRESS)
-                {
-                    insert_variable_by_ope(addr, VARIABLE);
-                    Operand *temp = malloc(sizeof(Operand));
-                    if (index == 0)
-                    {
-                        insert_assign_dereference(addr, o);
-                    }
-                    else
-                    {
-                        insert_variable_by_ope(temp, ADDRESS);
-                        insert_binop(temp, o, get_constant(index * 4), "PLUS");
-                        insert_assign_dereference(addr, temp);
-                    }
-                }
-                return addr;
-            }
-            if (field_symbol->type->kind == STRUCTURE)
-            {
-                now_stack = field_symbol;
-            }
-            return o;
-        }
+        // if (nodes[sons[0]]->type != Exp_ExpDotId) // 递归到最里面
+        // {
+        //     char *name = get_exp_name(sons[0]);
+        //     Symbol *s_ = SymbolGet(name, VAR);
+        //     if (s_->type->kind == STRUCTURE)
+        //         now_stack = s_;
+        //     if (s_->type->kind == ARRAY)
+        //     {
+        //         Symbol *s__ = SymbolGet(s_->type->array->type->struct_name, STRUCT);
+        //         now_stack = s__;
+        //     }
+        //     now_size = 0;
+        //     // 不需要递归
+        //     if (now_depth == 1)
+        //     {
+        //         int index = cal_index(field);
+        //         now_depth = 0;
+        //         Operand *addr = malloc(sizeof(Operand));
+        //         if (o->kind == VARIABLE)
+        //         {
+        //             insert_variable_by_ope(addr, ADDRESS);
+        //             insert_address_assign(addr, o, index * 4);
+        //         }
+        //         if (o->kind == ADDRESS)
+        //         {
+        //             insert_variable_by_ope(addr, VARIABLE);
+        //             Operand *temp = malloc(sizeof(Operand));
+        //             if (index == 0)
+        //             {
+        //                 return o;
+        //             }
+        //             else
+        //             {
+        //                 insert_variable_by_ope(temp, ADDRESS);
+        //                 insert_binop(temp, o, get_constant(index * 4), "PLUS");
+        //             }
+        //         }
+        //         return addr;
+        //     }
+        //     else
+        //     {
+        //         now_size += cal_index(field);
+        //         Symbol *field_symbol = SymbolGet(field, FIELD);
+        //         if (field_symbol->type->kind == STRUCTURE)
+        //             now_stack = field_symbol;
+        //     }
+        //     return o;
+        // }
+        // else
+        // {
+        //     //这里需要能判断到了结构体的最外层
+        //     now_depth--;
+        //     Symbol *field_symbol = SymbolGet(field, FIELD);
+        //     now_size += cal_index(field);
+        //     if (now_depth == 1)
+        //     {
+        //         now_depth = 0;
+        //         Operand *addr = malloc(sizeof(Operand));
+        //         if (o->kind == VARIABLE)
+        //         {
+        //             insert_variable_by_ope(addr, ADDRESS);
+        //             insert_address_assign(addr, o, now_size * 4);
+        //         }
+        //         if (o->kind == ADDRESS)
+        //         {
+        //             insert_variable_by_ope(addr, VARIABLE);
+        //             Operand *temp = malloc(sizeof(Operand));
+        //             if (index == 0)
+        //             {
+        //                 return o;
+        //             }
+        //             else
+        //             {
+        //                 insert_variable_by_ope(temp, ADDRESS);
+        //                 insert_binop(temp, o, get_constant(index * 4), "PLUS");
+        //                 insert_assign_dereference(addr, temp);
+        //             }
+        //         }
+        //         return addr;
+        //     }
+        //     if (field_symbol->type->kind == STRUCTURE)
+        //     {
+        //         now_stack = field_symbol;
+        //     }
+        //     return o;
+        // }
     }
     case Exp_Id:
     {
         char *name = nodes[sons[0]]->value;
+        if (IR_DEBUG)
+        {
+            printf("%s\n", name);
+        }
         Operand *o = get_variable(name);
         return o;
     }
@@ -900,7 +1093,8 @@ Operand *translate_Exp(int index)
 void translate_Cond(int index, int true_label, int false_label)
 {
     PROCESS(exp);
-    if(IR_DEBUG) printf("Enter Cond\n");
+    if (IR_DEBUG)
+        printf("Enter Cond\n");
     switch (exp->type)
     {
     case Exp_ExpAndExp:
@@ -930,7 +1124,7 @@ void translate_Cond(int index, int true_label, int false_label)
     }
     case Exp_NotExp:
     {
-        translate_Cond(index, false_label, true_label);
+        translate_Cond(sons[1], false_label, true_label);
         break;
     }
     default:

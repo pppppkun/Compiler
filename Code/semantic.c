@@ -293,7 +293,6 @@ int SymbolContains(char *name, SymbolKind kind)
                     return 1;
                 break;
             case FUNCTION_PARAM:
-                printf("%s\n", symbol->name);
                 if (kind == VAR || kind == STRUCT || kind == FIELD || kind == FUNCTION_PARAM)
                     return 1;
                 break;
@@ -1244,6 +1243,7 @@ int semanticAnalyze(int last_node)
     write->type->field->next->type = INT;
     write->kind = FUNCTION;
     write->name = "write";
+    write->next = NULL;
     SymbolInsert(write);
     
     Symbol* read = malloc(sizeof(Symbol));
@@ -1253,6 +1253,7 @@ int semanticAnalyze(int last_node)
     write->type->field->type = INT;
     read->kind = FUNCTION;
     read->name = "read";
+    read->next = NULL;
     SymbolInsert(read);
 
     ProgramAnalyze(last_node);

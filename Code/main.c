@@ -1,7 +1,7 @@
 #include "main.h"
 #include "semantic.h"
 #include "ir.h"
-long nums = 1000000;
+long nums = 100000000;
 void my_debug(char *str, int line)
 {
     if (DEBUG)
@@ -146,7 +146,9 @@ int main(int argc, char **argv)
     if (AST_PRINT_FLAG)
     {
         //print_AST(nodes_point - 1, 0);
+        if(IR_DEBUG) printf("Enter Semantic\n");
         semanticAnalyze(nodes_point - 1);
+        if(IR_DEBUG) printf("Enter IR\n");
         gen_ir(nodes_point - 1, argv[2]);
     }
     return 0;

@@ -870,7 +870,13 @@ void translate_Dec(int index)
     {
         Operand *l = translate_VarDec(sons[0]);
         Operand *r = translate_Exp(sons[2]);
-        insert_assign(l, r);
+        if (l->kind == ADDRESS)
+            insert_dereference_assign(l, r);
+        else if (r->kind == ADDRESS)
+            insert_assign_dereference(l, r);
+        else
+            insert_assign(l, r);
+        // insert_assign(l, r);
     }
     default:
         break;
@@ -895,7 +901,8 @@ Operand *translate_VarDec(int index)
     }
     case VarDec_VarDecLbIntRb:
     {
-        if(nodes[sons[0]]->type==VarDec_VarDecLbIntRb) {
+        if (nodes[sons[0]]->type == VarDec_VarDecLbIntRb)
+        {
             printf("error! meet High Dimensional Array\n");
             exit(0);
         }
@@ -969,6 +976,7 @@ Operand *translate_Exp(int index)
         Operand *o = translate_Exp(sons[1]);
         Operand *c = get_constant(0);
         Operand *result = malloc(sizeof(Operand));
+        insert_variable_by_ope(result, VARIABLE);
         insert_binop(result, c, o, "MINUS");
         return result;
     }
@@ -983,6 +991,7 @@ Operand *translate_Exp(int index)
         translate_Args(sons[2]);
         Operand *ret = malloc(sizeof(Operand));
         ret = insert_variable_by_ope(ret, VARIABLE);
+        if(IR_DEBUG) printf("%s\n",nodes[sons[0]]->value);
         insert_call(ret, nodes[sons[0]]->value);
         return ret;
     }
@@ -1121,6 +1130,10 @@ Operand *translate_Exp(int index)
         Operand *o = malloc(sizeof(Operand));
         o->kind = CONSTANT;
         o->u.value = IntAnalyze(sons[0]);
+        if (IR_DEBUG)
+        {
+            printf("%d\n", o->u.value);
+        }
         return o;
     }
     default:
@@ -1156,6 +1169,8 @@ void translate_Cond(int index, int true_label, int false_label)
         Operand *o1 = translate_Exp(sons[0]);
         Operand *o2 = translate_Exp(sons[2]);
         char *relop = nodes[sons[1]]->value;
+        if (IR_DEBUG)
+            printf("relop: %s\n", relop);
         insert_ifgoto(o1, o2, relop, true_label);
         insert_goto(false_label);
         break;

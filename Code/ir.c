@@ -168,6 +168,10 @@ void print_ir(FILE *f)
             {
                 fprintf(f, "&v%d", right->u.var_no);
             }
+            else if (right->kind == ADDRESS)
+            {
+                fprintf(f, "v%d", right->u.var_no);
+            }
             if (constant != NULL)
             {
                 if (constant->kind == CONSTANT)
@@ -215,7 +219,7 @@ void print_ir(FILE *f)
             break;
         case RETURN:
             fprintf(f, "RETURN ");
-            print_var_or_constant_or_addr(code->u.ret, f, 1);
+            print_binop_(code->u.ret, f, 1);
             fprintf(f, "\n");
             break;
         case DEC:
@@ -527,7 +531,6 @@ void insert_dereference_assign(Operand *left, Operand *right)
     insert_code(code);
 }
 
-
 // without * 4;
 int sizeofStruct(Field *field)
 {
@@ -561,7 +564,8 @@ int sizeofStruct(Field *field)
 int sizeofArrayItem(char *name)
 {
     Symbol *s = SymbolGet(name, VAR);
-    if(s == NULL) s = SymbolGet(name, FIELD);
+    if (s == NULL)
+        s = SymbolGet(name, FIELD);
     if (s->type->array->type->kind == BASIC)
     {
         return 4;
@@ -572,9 +576,37 @@ int sizeofArrayItem(char *name)
     }
 }
 
+Symbol *find_struct(char *name)
+{
+    for (int i = 0; i < nodes_point; i++)
+    {
+        if (symbol_table[i]->lineno == -1)
+            continue;
+        else
+        {
+            Symbol *symbol = symbol_table[i];
+            while (symbol != NULL)
+            {
+                if (symbol->kind == STRUCT)
+                {
+                    Field *field = symbol->type->field;
+                    while (field != NULL)
+                    {
+                        if (strcmp(field->name, name) == 0)
+                            return symbol;
+                        else
+                            field = field->next;
+                    }
+                }
+                symbol = symbol->next;
+            }
+        }
+    }
+    return NULL;
+}
+
 int cal_index(char *field)
 {
-    printf("cal index %s\n", field);
     Field *struct_field = now_stack->type->field;
     int size = 0;
     while (struct_field != NULL)
@@ -584,7 +616,7 @@ int cal_index(char *field)
         else
         {
             if (struct_field->type->kind == BASIC)
-                size+=4;
+                size += 4;
             else if (struct_field->type->kind == ARRAY)
             {
                 size += struct_field->type->array->size * sizeofArrayItem(struct_field->name);
@@ -646,11 +678,27 @@ char *get_exp_name(int index)
     {
         return get_exp_name(sons[0]);
     }
+    case Exp_ExpDotId:
+        return get_exp_name(sons[0]);
     default:
         break;
     }
 }
 
+char *get_array_name(int index)
+{
+    PROCESS(exp);
+    switch (exp->type)
+    {
+    case Exp_Id:
+        return nodes[sons[0]]->value;
+        break;
+    case Exp_ExpDotId:
+        return nodes[sons[2]]->value;
+    default:
+        break;
+    }
+}
 
 void translate_Program(int index)
 {
@@ -847,6 +895,10 @@ Operand *translate_VarDec(int index)
     }
     case VarDec_VarDecLbIntRb:
     {
+        if(nodes[sons[0]]->type==VarDec_VarDecLbIntRb) {
+            printf("error! meet High Dimensional Array\n");
+            exit(0);
+        }
         Operand *o = translate_VarDec(sons[0]);
         int size = IntAnalyze(sons[2]);
         char *array_name = nodes[nodes[sons[0]]->child]->value;
@@ -953,76 +1005,73 @@ Operand *translate_Exp(int index)
         Operand *o1 = translate_Exp(sons[0]);
         Operand *o2 = translate_Exp(sons[2]);
         Operand *result = malloc(sizeof(Operand));
+        insert_variable_by_ope(result, ADDRESS);
+        // printf("%s\n", now_stack->name);
+        int size = 0;
         if (o1->kind == VARIABLE)
         {
-            // the item of Array
-            int size = sizeofArrayItem(get_exp_name(sons[0]));
-            insert_variable_by_ope(result, ADDRESS);
-            Operand *o3 = malloc(sizeof(Operand));
-            insert_variable_by_ope(o3, VARIABLE);
-            insert_binop(o3, o2, get_constant(size), "STAR");
-            insert_array(result, o1, o3);
+            size = sizeofArrayItem(get_exp_name(sons[0]));
         }
-        // if (o1->kind == ADDRESS)
-        // {
-        //     int size = sizeofArrayItem(get_exp_name(sons[0])) * 4;
-        //     insert_variable_by_ope(result, ADDRESS);
-        //     Operand *o3 = malloc(sizeof(Operand));
-        //     insert_variable_by_ope(o3, VARIABLE);
-        //     insert_binop(o3, o2, get_constant(size), "STAR");   
-        //     insert_array(result, o1, o3);
-        //     // insert_assign_dereference(result, temp);
-        // }
+        if (o1->kind == ADDRESS)
+        {
+            char *array_name = get_array_name(sons[0]);
+            size = sizeofArrayItem(array_name);
+        }
+        if (IR_DEBUG)
+            printf("%d\n", size);
+        Operand *o3 = malloc(sizeof(Operand));
+        insert_variable_by_ope(o3, VARIABLE);
+        insert_binop(o3, o2, get_constant(size), "STAR");
+        insert_array(result, o1, o3);
         return result;
     }
-    case Exp_ExpDotId: //wait.
+    case Exp_ExpDotId:
     {
         now_depth++;
         Operand *o = translate_Exp(sons[0]);
         char *field = nodes[sons[2]]->value;
-
+        now_stack = find_struct(field);
+        int index = cal_index(field);
+        Operand *addr = malloc(sizeof(Operand));
+        insert_variable_by_ope(addr, ADDRESS);
+        if (o->kind == VARIABLE)
+        {
+            insert_address_assign(addr, o, index);
+        }
+        if (o->kind == ADDRESS)
+        {
+            insert_binop(addr, o, get_constant(index), "PLUS");
+        }
+        return addr;
         // if (nodes[sons[0]]->type != Exp_ExpDotId) // 递归到最里面
         // {
-        //     char *name = get_exp_name(sons[0]);
-        //     Symbol *s_ = SymbolGet(name, VAR);
-        //     if (s_->type->kind == STRUCTURE)
-        //         now_stack = s_;
-        //     if (s_->type->kind == ARRAY)
-        //     {
-        //         Symbol *s__ = SymbolGet(s_->type->array->type->struct_name, STRUCT);
-        //         now_stack = s__;
-        //     }
+        //     // char *name = get_exp_name(sons[0]);
+        //     printf("field %s\n", field);
+        //     now_stack = find_struct(field);
+        //     printf("struct %s\n", now_stack->name);
         //     now_size = 0;
         //     // 不需要递归
         //     if (now_depth == 1)
         //     {
         //         int index = cal_index(field);
+        //         printf("index %d\n", index);
         //         now_depth = 0;
         //         Operand *addr = malloc(sizeof(Operand));
+        //         insert_variable_by_ope(addr, ADDRESS);
         //         if (o->kind == VARIABLE)
         //         {
-        //             insert_variable_by_ope(addr, ADDRESS);
-        //             insert_address_assign(addr, o, index * 4);
+        //             insert_address_assign(addr, o, index);
         //         }
         //         if (o->kind == ADDRESS)
         //         {
-        //             insert_variable_by_ope(addr, VARIABLE);
-        //             Operand *temp = malloc(sizeof(Operand));
-        //             if (index == 0)
-        //             {
-        //                 return o;
-        //             }
-        //             else
-        //             {
-        //                 insert_variable_by_ope(temp, ADDRESS);
-        //                 insert_binop(temp, o, get_constant(index * 4), "PLUS");
-        //             }
+        //             insert_binop(addr, o, get_constant(index), "PLUS");
         //         }
         //         return addr;
         //     }
         //     else
         //     {
         //         now_size += cal_index(field);
+        //         printf("index %d\n", now_size);
         //         Symbol *field_symbol = SymbolGet(field, FIELD);
         //         if (field_symbol->type->kind == STRUCTURE)
         //             now_stack = field_symbol;
@@ -1039,25 +1088,14 @@ Operand *translate_Exp(int index)
         //     {
         //         now_depth = 0;
         //         Operand *addr = malloc(sizeof(Operand));
+        //         insert_variable_by_ope(addr, ADDRESS);
         //         if (o->kind == VARIABLE)
         //         {
-        //             insert_variable_by_ope(addr, ADDRESS);
-        //             insert_address_assign(addr, o, now_size * 4);
+        //             insert_address_assign(addr, o, now_size);
         //         }
         //         if (o->kind == ADDRESS)
         //         {
-        //             insert_variable_by_ope(addr, VARIABLE);
-        //             Operand *temp = malloc(sizeof(Operand));
-        //             if (index == 0)
-        //             {
-        //                 return o;
-        //             }
-        //             else
-        //             {
-        //                 insert_variable_by_ope(temp, ADDRESS);
-        //                 insert_binop(temp, o, get_constant(index * 4), "PLUS");
-        //                 insert_assign_dereference(addr, temp);
-        //             }
+        //             insert_binop(addr, o, get_constant(now_size), "PLUS");
         //         }
         //         return addr;
         //     }

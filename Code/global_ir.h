@@ -185,7 +185,8 @@ struct InterCode
         CALL,
         PARAM,
         READ,
-        WRITE
+        WRITE,
+        SPACE
     } kind;
     union
     {
@@ -224,6 +225,8 @@ struct InterCode
         } call;
         Operand *rw;
     } u;
+    int* live_var;
+    int lineno;
 };
 
 struct InterCodes
@@ -258,5 +261,7 @@ Symbol *SymbolGet(char *name, SymbolKind kind);
 unsigned int hash_pjw(char *name);
 int IntAnalyze(int index);
 char *random();
+void optimize(int, char*);
+void print_code(InterCode *code, FILE *f);
 
 #endif

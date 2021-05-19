@@ -5,9 +5,10 @@ int label_index = 1;
 Symbol *now_stack;
 int now_depth = 0;
 int now_size = 0;
+int whether_optimize = 0;
 void insert_code(InterCode *code)
 {
-    now->code = malloc(sizeof(InterCode));
+    // now->code = malloc(sizeof(InterCode));
     now->code = code;
     now->next = malloc(sizeof(InterCodes));
     now->next->prev = now;
@@ -116,142 +117,144 @@ void print_param(Variable *param, FILE *f)
     }
 }
 
+void print_code(InterCode *code, FILE *f)
+{
+    switch (code->kind)
+    {
+    case LABEL:
+    {
+        fprintf(f, "LABEL label%d :\n", code->u.label_index);
+        break;
+    }
+    case IR_FUNCTION:
+        fprintf(f, "FUNCTION %s :\n", code->u.function_name);
+        break;
+    case ASSIGN:
+    {
+        Operand *left = code->u.assign.left;
+        Operand *right = code->u.assign.right;
+        // print_var_or_constant_or_addr(left, f, -1);
+        fprintf(f, "v%d", left->u.var_no);
+        fprintf(f, " := ");
+        print_var_or_constant_or_addr(right, f, 1);
+        fprintf(f, "\n");
+        break;
+    }
+    case ADD:
+        print_binop(code, '+', f);
+        break;
+    case SUB:
+        print_binop(code, '-', f);
+        break;
+    case MUL:
+        print_binop(code, '*', f);
+        break;
+    case DIV:
+        print_binop(code, '/', f);
+        break;
+    case ADDR_ASSIGN:
+    {
+        Operand *left = code->u.binop.result;
+        Operand *right = code->u.binop.op1;
+        Operand *constant = code->u.binop.op2;
+        fprintf(f, "v%d := ", left->u.var_no);
+        if (right->kind == VARIABLE)
+        {
+            fprintf(f, "&v%d", right->u.var_no);
+        }
+        else if (right->kind == ADDRESS)
+        {
+            fprintf(f, "v%d", right->u.var_no);
+        }
+        if (constant != NULL)
+        {
+            if (constant->kind == CONSTANT)
+            {
+                fprintf(f, " + #%d", constant->u.value);
+            }
+            if (constant->kind == VARIABLE)
+            {
+                fprintf(f, " + v%d", constant->u.var_no);
+            }
+        }
+        fprintf(f, "\n");
+        break;
+    }
+    case ASSIGN_DEREFERENCE:
+    {
+        Operand *left = code->u.assign.left;
+        Operand *right = code->u.assign.right;
+        fprintf(f, "v%d := *v%d\n", left->u.var_no, right->u.var_no);
+        break;
+    }
+    case DEREFERENCE_ASSIGN:
+    {
+        Operand *left = code->u.assign.left;
+        Operand *right = code->u.assign.right;
+        fprintf(f, "*v%d := ", left->u.var_no);
+        if (right->kind == VARIABLE)
+            fprintf(f, "v%d", right->u.var_no);
+        else if (right->kind == CONSTANT)
+            fprintf(f, "#%d", right->u.value);
+        else
+            fprintf(f, "*v%d", right->u.var_no);
+        fprintf(f, "\n");
+        break;
+    }
+    case GOTO:
+        fprintf(f, "GOTO label%d\n", code->u.label_index);
+        break;
+    case IF_GOTO:
+        fprintf(f, "IF ");
+        if_else_print(code->u.if_go.op1, f);
+        fprintf(f, " %s ", code->u.if_go.relop);
+        if_else_print(code->u.if_go.op2, f);
+        fprintf(f, " GOTO label%d\n", code->u.if_go.label_index);
+        break;
+    case RETURN:
+        fprintf(f, "RETURN ");
+        print_binop_(code->u.ret, f, 1);
+        fprintf(f, "\n");
+        break;
+    case DEC:
+        fprintf(f, "DEC v%d %d\n", code->u.dec.x->u.var_no, code->u.dec.size * 4);
+        break;
+    case ARG:
+        // print_arg(code->u.args);
+        fprintf(f, "ARG ");
+        //TODO
+        print_arg(code->u.arg.arg, code->u.arg.kind, f);
+        // print_var_or_constant_or_addr(code->u.arg, f, 1);
+        fprintf(f, "\n");
+        break;
+    case PARAM:
+        print_param(code->u.param, f);
+        break;
+    case CALL:
+        fprintf(f, "v%d := CALL %s\n", code->u.call.ret->u.var_no, code->u.call.function_name);
+        break;
+    case READ:
+        fprintf(f, "READ v%d\n", code->u.rw->u.var_no);
+        break;
+    case WRITE:
+        fprintf(f, "WRITE ");
+        if (code->u.rw->kind == ADDRESS)
+            fprintf(f, "*");
+        print_var_or_constant_or_addr(code->u.rw, f, 0);
+        fprintf(f, "\n");
+        break;
+    default:
+        break;
+    }
+}
+
 void print_ir(FILE *f)
 {
     InterCodes *head = codes->next;
     while (head != NULL && head->code != NULL)
     {
         InterCode *code = head->code;
-        switch (code->kind)
-        {
-        case LABEL:
-        {
-            fprintf(f, "LABEL label%d :\n", code->u.label_index);
-            break;
-        }
-        case IR_FUNCTION:
-            fprintf(f, "FUNCTION %s :\n", head->code->u.function_name);
-            break;
-        case ASSIGN:
-        {
-            Operand *left = code->u.assign.left;
-            Operand *right = code->u.assign.right;
-            // print_var_or_constant_or_addr(left, f, -1);
-            if (left->kind == ADDRESS)
-                fprintf(f, "*v%d", left->u.var_no);
-            else
-                fprintf(f, "v%d", left->u.var_no);
-            fprintf(f, " := ");
-            print_var_or_constant_or_addr(right, f, 1);
-            fprintf(f, "\n");
-            break;
-        }
-        case ADD:
-            print_binop(code, '+', f);
-            break;
-        case SUB:
-            print_binop(code, '-', f);
-            break;
-        case MUL:
-            print_binop(code, '*', f);
-            break;
-        case DIV:
-            print_binop(code, '/', f);
-            break;
-        case ADDR_ASSIGN:
-        {
-            Operand *left = code->u.binop.result;
-            Operand *right = code->u.binop.op1;
-            Operand *constant = code->u.binop.op2;
-            fprintf(f, "v%d := ", left->u.var_no);
-            if (right->kind == VARIABLE)
-            {
-                fprintf(f, "&v%d", right->u.var_no);
-            }
-            else if (right->kind == ADDRESS)
-            {
-                fprintf(f, "v%d", right->u.var_no);
-            }
-            if (constant != NULL)
-            {
-                if (constant->kind == CONSTANT)
-                {
-                    fprintf(f, " + #%d", constant->u.value);
-                }
-                if (constant->kind == VARIABLE)
-                {
-                    fprintf(f, " + v%d", constant->u.var_no);
-                }
-            }
-            fprintf(f, "\n");
-            break;
-        }
-        case ASSIGN_DEREFERENCE:
-        {
-            Operand *left = code->u.assign.left;
-            Operand *right = code->u.assign.right;
-            fprintf(f, "v%d := *v%d\n", left->u.var_no, right->u.var_no);
-            break;
-        }
-        case DEREFERENCE_ASSIGN:
-        {
-            Operand *left = code->u.assign.left;
-            Operand *right = code->u.assign.right;
-            fprintf(f, "*v%d := ", left->u.var_no);
-            if (right->kind == VARIABLE)
-                fprintf(f, "v%d", right->u.var_no);
-            else if (right->kind == CONSTANT)
-                fprintf(f, "#%d", right->u.value);
-            else
-                fprintf(f, "*v%d", right->u.var_no);
-            fprintf(f, "\n");
-            break;
-        }
-        case GOTO:
-            fprintf(f, "GOTO label%d\n", code->u.label_index);
-            break;
-        case IF_GOTO:
-            fprintf(f, "IF ");
-            if_else_print(code->u.if_go.op1, f);
-            fprintf(f, " %s ", code->u.if_go.relop);
-            if_else_print(code->u.if_go.op2, f);
-            fprintf(f, " GOTO label%d\n", code->u.if_go.label_index);
-            break;
-        case RETURN:
-            fprintf(f, "RETURN ");
-            print_binop_(code->u.ret, f, 1);
-            fprintf(f, "\n");
-            break;
-        case DEC:
-            fprintf(f, "DEC v%d %d\n", code->u.dec.x->u.var_no, code->u.dec.size * 4);
-            break;
-        case ARG:
-            // print_arg(code->u.args);
-            fprintf(f, "ARG ");
-            //TODO
-            print_arg(code->u.arg.arg, code->u.arg.kind, f);
-            // print_var_or_constant_or_addr(code->u.arg, f, 1);
-            fprintf(f, "\n");
-            break;
-        case PARAM:
-            print_param(code->u.param, f);
-            break;
-        case CALL:
-            fprintf(f, "v%d := CALL %s\n", code->u.call.ret->u.var_no, code->u.call.function_name);
-            break;
-        case READ:
-            fprintf(f, "READ v%d\n", code->u.rw->u.var_no);
-            break;
-        case WRITE:
-            fprintf(f, "WRITE ");
-            if (code->u.rw->kind == ADDRESS)
-                fprintf(f, "*");
-            print_var_or_constant_or_addr(code->u.rw, f, 0);
-            fprintf(f, "\n");
-            break;
-        default:
-            break;
-        }
+        print_code(code, f);
         head = head->next;
     }
 }
@@ -388,6 +391,14 @@ void insert_assign(Operand *left, Operand *right)
     code->kind = ASSIGN;
     code->u.assign.left = left;
     code->u.assign.right = right;
+    // if (left->kind != CONSTANT && right->kind != CONSTANT)
+    // {
+    //     if (left->u.var_no == right->u.var_no)
+    //     {
+    //         free(code);
+    //         return;
+    //     }
+    // }
     insert_code(code);
     // free(code);
 }
@@ -414,6 +425,24 @@ void insert_binop(Operand *result, Operand *left, Operand *right, char *binop)
     code->u.binop.op1 = left;
     code->u.binop.op2 = right;
     code->u.binop.result = result;
+    if (result->kind != ADDRESS && left->kind!=ADDRESS && right->kind != ADDRESS)
+    {
+        if (right->kind == CONSTANT)
+        {
+            if ((right->u.value == 0) && (code->kind == ADD || code->kind == SUB))
+            {
+                free(code);
+                insert_assign(result, left);
+                return;
+            }
+            if ((right->u.value == 1) && (code->kind == MUL || code->kind == DIV))
+            {
+                free(code);
+                insert_assign(result, left);
+                return;
+            }
+        }
+    }
     insert_code(code);
 }
 
@@ -654,6 +683,11 @@ void gen_ir(int last_node, char *file_name)
     translate_Program(last_node);
     FILE *f = fopen(file_name, "w+");
     print_ir(f);
+    fclose(f);
+    if (whether_optimize == 0)
+    {
+        optimize(v_index, file_name);
+    }
     // codes = codes->next;
     if (IR_DEBUG)
     {
@@ -894,6 +928,7 @@ Operand *translate_VarDec(int index)
         Symbol *s = SymbolGet(name, VAR);
         if (s->type->kind == STRUCTURE)
         {
+            whether_optimize = 1;
             Operand *o = insert_variable_by_name(name, VARIABLE);
             insert_dec(o, sizeofStruct(s->type->field));
         }
@@ -991,7 +1026,8 @@ Operand *translate_Exp(int index)
         translate_Args(sons[2]);
         Operand *ret = malloc(sizeof(Operand));
         ret = insert_variable_by_ope(ret, VARIABLE);
-        if(IR_DEBUG) printf("%s\n",nodes[sons[0]]->value);
+        if (IR_DEBUG)
+            printf("%s\n", nodes[sons[0]]->value);
         insert_call(ret, nodes[sons[0]]->value);
         return ret;
     }
@@ -1036,6 +1072,7 @@ Operand *translate_Exp(int index)
     }
     case Exp_ExpDotId:
     {
+        whether_optimize = 1;
         now_depth++;
         Operand *o = translate_Exp(sons[0]);
         char *field = nodes[sons[2]]->value;

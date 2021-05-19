@@ -1,15 +1,13 @@
 int main()
 {
-    int a,b,c,d;
-    a = 2;
-    b = 3;
-    c = 4;
-    d = 5;
-    if( a != b) {
-        write(c);
-    }
-    else{
-        write(d);
-    }
+    int x=0,y=0,z=0,p=0,q=0,m=0,k=0;
+    x = p + 1;
+    y = q + z;
+    m = k;
+    y = m - 1;
+    x = 4;
+    q = y;
+    x = x - 3;
+    z = 2*p;
     return 0;
 }

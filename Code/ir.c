@@ -13,6 +13,7 @@ void insert_code(InterCode *code)
     now->next = malloc(sizeof(InterCodes));
     now->next->prev = now;
     now = now->next;
+    now->code = NULL;
     now->next = NULL;
     // printf("%d\n", code->kind);
     // printf("Insert Code Success\n");
@@ -441,6 +442,12 @@ void insert_binop(Operand *result, Operand *left, Operand *right, char *binop)
                 insert_assign(result, left);
                 return;
             }
+        }
+        if(code->kind == DIV && left->u.var_no == right->u.var_no) {
+            code->u.binop.op1 = get_constant(1);
+            code->u.binop.op2 = get_constant(1);
+            insert_code(code);
+            return;
         }
     }
     insert_code(code);

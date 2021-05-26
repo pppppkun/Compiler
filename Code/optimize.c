@@ -4,12 +4,15 @@
 typedef struct BasicBlock BB;
 typedef struct DAG DAG;
 typedef struct DAGNode DAGNode;
+typedef struct CFGNode CFGNode;
+typedef struct AvailableExpression AE;
 typedef enum DAGNodeKind DAG_KIND;
 
 struct BasicBlock
 {
     InterCodes *start;
     InterCodes *end;
+    int size;
 };
 
 enum DAGNodeKind
@@ -33,20 +36,35 @@ struct DAGNode
     int lineno;
     // reference
     int reference;
+    //
+    int last_modify_line;
     DAGNode *left;
     DAGNode *right;
 };
 
+struct AvailableExpression
+{
+    int lineno;
+    Operand *op1;
+    int op_kind;
+    Operand *op2;
+    Operand *res;
+    AE *next;
+    AE *prev;
+};
+
 struct CFGNode
 {
-    BB *block;
+    int size;
     BB **in;
-    BB **out;
 };
 
 DAGNode **var_dag;
 DAGNode **constant_dag;
+CFGNode *cfg;
 InterCodes **leaders;
+AE *aes;
+AE *next;
 BB **blocks;
 int *if_go;
 
@@ -54,6 +72,7 @@ int var_size;
 int constant_size;
 int block_size;
 int leader_size;
+int aes_index;
 
 int insert_leaders(InterCodes *c, int size)
 {
@@ -160,6 +179,17 @@ int count_ope(int v_index, InterCodes *c)
     }
 }
 
+BB *find_BB_using_label(int label)
+{
+    for (int i = 0; i < block_size; i++)
+    {
+        if (blocks[i]->start->code->kind == LABEL && blocks[i]->start->code->u.label_index == label)
+        {
+            return blocks[i];
+        }
+    }
+}
+
 void get_BB()
 {
     InterCodes *head = codes;
@@ -246,13 +276,17 @@ void get_BB()
     blocks[i] = malloc(sizeof(BB));
     blocks[i]->start = leaders[0];
     i += 1;
+    int b_size = 1;
     while (head != NULL && head->code != NULL)
     {
+        b_size++;
         if (is_leaders(head, leader_size) == 0)
         {
             // printf("enter here ");
             // print_code(head->code, stdout);
             blocks[i - 1]->end = head->prev;
+            blocks[i - 1]->size = b_size;
+            b_size = 1;
             blocks[i++] = malloc(sizeof(BB));
             blocks[i - 1]->start = head;
             // printf("leave here\n");
@@ -265,6 +299,41 @@ void get_BB()
         head = head->prev;
     blocks[i - 1]->end = head;
     block_size = i;
+    cfg = malloc(sizeof(CFGNode) * block_size);
+    for (int i = 0; i < block_size; i++)
+        cfg[i].in = malloc(sizeof(BB *) * 3);
+    //void build_cfg()
+    for (int i = 0; i < block_size; i++)
+    {
+        if (blocks[i]->end->code->kind == GOTO)
+        {
+            cfg[i].size = 1;
+            cfg[i].in[0] = find_BB_using_label(blocks[i]->end->code->u.label_index);
+        }
+        else if (blocks[i]->end->code->kind == IF_GOTO)
+        {
+            cfg[i].size = 1;
+            cfg[i].in[0] = find_BB_using_label(blocks[i]->end->code->u.if_go.label_index);
+            if (i != block_size - 1)
+            {
+                cfg[i].size = 2;
+                cfg[i].in[1] = blocks[i + 1];
+            }
+        }
+        else
+        {
+            if (i != block_size - 1)
+            {
+                cfg[i].size = 1;
+                cfg[i].in[0] = blocks[i + 1];
+            }
+            else
+            {
+                cfg[i].size = 0;
+            }
+        }
+    }
+    // free(cfg);
 }
 
 int assign_optimize_block(BB *block)
@@ -274,10 +343,12 @@ int assign_optimize_block(BB *block)
     while (prev != block->end)
     {
         InterCodes *next = prev->next;
-        while(1)
+        while (1)
         {
-            if(next->code->kind==SPACE) next=next->next;
-            else break;
+            if (next->code->kind == SPACE)
+                next = next->next;
+            else
+                break;
         }
         if (is_binop(prev->code) == 1 && next->code->kind == ASSIGN)
         {
@@ -288,7 +359,7 @@ int assign_optimize_block(BB *block)
             {
                 flag = 1;
                 prev->code->u.binop.result = next->code->u.assign.left;
-                next->code->kind=SPACE;
+                next->code->kind = SPACE;
                 // prev->next = next->next;
                 // next->next->prev = prev;
                 // if (next == block->end)
@@ -307,7 +378,7 @@ int assign_optimize_block(BB *block)
             {
                 flag = 1;
                 prev->code->u.assign.left = next->code->u.assign.left;
-                next->code->kind=SPACE;
+                next->code->kind = SPACE;
                 // prev->next = next->next;
                 // next->next->prev = prev;
                 // if (next == block->end)
@@ -430,10 +501,16 @@ void live_var_analyze(BB *block)
             if (o->kind != CONSTANT)
                 code->live_var[o->u.var_no] = code->lineno;
         }
+        if (code->kind == READ || code->kind == WRITE)
+        {
+            Operand *o = code->u.rw;
+            if (o->kind != CONSTANT)
+                code->live_var[o->u.var_no] = code->lineno;
+        }
         // print_code(code, stdout);
-        // for (int i = 0; i < max_value; i++)
+        // for (int i = 0; i < var_size; i++)
         // {
-        //     printf("%d ", prev->code->live_var[i]);
+        //     printf("%d %d ",i, prev->code->live_var[i]);
         // }
         // printf("\n");
         if (prev == block->start)
@@ -516,21 +593,31 @@ DAGNode *create_or_get_node(Operand *o, int lineno)
             return var_dag[o->u.var_no];
     }
 }
-
-int common_sub_expression_elimination(InterCode* code)
-{
-    
-}
-
 DAGNode *def_value(InterCode *code)
 {
+    // common_sub_expression_elimination(code);
     if (code->kind == ASSIGN)
     {
         // print_code(code, stdout);
         Operand *left = code->u.assign.left;
         Operand *right = code->u.assign.right;
         DAGNode *n = create_or_get_node(right, code->lineno);
-        var_dag[left->u.var_no] = n;
+        DAGNode *res;
+        if (var_dag[left->u.var_no] != NULL)
+        {
+            res = var_dag[left->u.var_no];
+        }
+        else
+        {
+            res = malloc(sizeof(DAGNode));
+        }
+        res->kind = DAG_VAR;
+        res->op_kind = code->kind;
+        res->lineno = code->lineno;
+        res->v_index = left->u.var_no;
+        res->left = n;
+        res->last_modify_line = code->lineno;
+        var_dag[left->u.var_no] = res;
         // if (n->kind == DAG_VAR)
         //     printf("%d v_index:%d\n", left->u.var_no, n->v_index);
         // if (n->kind == DAG_CONSTANT)
@@ -544,7 +631,15 @@ DAGNode *def_value(InterCode *code)
         Operand *op2 = code->u.binop.op2;
         DAGNode *l = create_or_get_node(op1, code->lineno);
         DAGNode *r = create_or_get_node(op2, code->lineno);
-        DAGNode *op = malloc(sizeof(DAGNode));
+        DAGNode *op;
+        if (var_dag[result->u.var_no] != NULL)
+        {
+            op = var_dag[result->u.var_no];
+        }
+        else
+        {
+            op = malloc(sizeof(DAGNode));
+        }
         op->kind = DAG_OP_WITH_VAR;
         op->op_kind = code->kind;
         op->lineno = code->lineno;
@@ -554,7 +649,6 @@ DAGNode *def_value(InterCode *code)
         var_dag[result->u.var_no] = op;
         // printf("%d\n", op->v_value]->v_index);
     }
-    common_sub_expression_elimination(code);
 }
 
 void build_dag_node(BB *block)
@@ -563,7 +657,7 @@ void build_dag_node(BB *block)
     while (1)
     {
         InterCode *code = prev->code;
-        if(code->kind==ASSIGN && is_binop(code) == 1)
+        if (code->kind == ASSIGN && is_binop(code) == 1)
             def_value(code);
         if (prev == block->end)
             break;
@@ -577,13 +671,14 @@ void build_dag()
     {
         live_var_analyze(blocks[i]);
     }
-    for (int i = 0; i < block_size; i++)
-    {
-        var_dag = malloc(sizeof(DAGNode *) * var_size);
-        build_dag_node(blocks[i]);
-        // common_sub_expression_elimination();
-        // dead_code_optimize_block();
-    }
+    // for (int i = 0; i < block_size; i++)
+    // {
+    //     aes = malloc(sizeof(AE));
+    //     var_dag = malloc(sizeof(DAGNode *) * var_size);
+    //     build_dag_node(blocks[i]);
+    //     // common_sub_expression_elimination();
+    //     // dead_code_optimize_block();
+    // }
 }
 
 int constant_optimize_block(BB *block)
@@ -668,22 +763,28 @@ int dead_code_optimize_block(BB *block)
         {
             if (prev->code->kind == ASSIGN)
             {
+                int var_no = prev->code->u.assign.left->u.var_no;
                 // for(int i = 0;i<max_value;i++) printf("%d ", next->code->live_var[i]);
                 // printf("\n");
-                if (next->code->live_var[prev->code->u.assign.left->u.var_no] == 0 || next->code->live_var[prev->code->u.assign.left->u.var_no] == -1 && if_go[prev->code->u.assign.left->u.var_no] != 1)
+                if ((next->code->live_var[var_no] == 0 || next->code->live_var[var_no] == -1) && if_go[var_no] != 1)
                 {
                     // print_code(prev->code, stdout);
-                    int var_no = prev->code->u.assign.left->u.var_no;
+                    // print_code(next->code, stdout);
+                    // printf("\n");
+                    // int var_no = prev->code->u.assign.left->u.var_no;
+                    // prev->code->kind=SPACE;
                 }
             }
             if (is_binop(prev->code) == 1)
             {
-                // for(int i = 0;i<max_value;i++) printf("%d ", next->code->live_var[i]);
-                // printf("\n");
-                if (next->code->live_var[prev->code->u.binop.result->u.var_no] == 0 || next->code->live_var[prev->code->u.binop.result->u.var_no] == -1 && if_go[prev->code->u.binop.result->u.var_no] != 1)
+                int var_no = prev->code->u.binop.result->u.var_no;
+                if ((next->code->live_var[var_no] == 0 || next->code->live_var[var_no] == -1) && if_go[var_no] != 1)
                 {
                     // print_code(prev->code, stdout);
+                    // print_code(next->code, stdout);
+                    // printf("\n");
                     // int var_no = prev->code->u.assign.left->u.var_no;
+                    // prev->code->kind=SPACE;
                 }
             }
         }
@@ -696,11 +797,239 @@ void dead_code_optimize()
 {
     for (int i = 0; i < block_size; i++)
     {
-        // int ret = constant_optimize_block(blocks[i]);
         int ret = 0;
         do
         {
             ret = dead_code_optimize_block(blocks[i]);
+        } while (ret != 0);
+    }
+}
+
+void insert_aes(InterCode *code)
+{
+    next->lineno = code->lineno;
+    next->op_kind = code->kind;
+    next->next = malloc(sizeof(next));
+    next->next->lineno = -1;
+    if (is_binop(code) == 1)
+    {
+        // print_code(code, stdout);
+        next->res = code->u.binop.result;
+        next->op1 = code->u.binop.op1;
+        next->op2 = code->u.binop.op2;
+    }
+    next->next->prev = next;
+    next = next->next;
+    next->next = NULL;
+}
+
+/**
+ * 1. 扫描每个语句 
+ *  1） 如果发现一条赋值语句，如果这个变量
+ *      1） 后续没有赋值语句且在其他block中出现，不能删除
+ *      2） 其他block没有这个变量或者后续有赋值语句，直接删除，中间全部替换
+ *  2） 如果发现一条binop语句
+ *      1） 查找整个AES，如果没有找到表达式相同的语句，直接插入
+ *      2） 如果找到了表达式相同的语句
+ *          1） 后续没有赋值语句且在其他block中出现，不能删除
+ *          2） 其他block没有这个变量或者后续有赋值语句，直接删除，中间全部替换
+ *      3） 如果binop语句的res是其他aes中的参数，那么直接删除其他的aes，并且对于每个被删除的aes，如果他们的res被其他变量引用了，就全都kill掉
+ *  3） 
+*/
+AE *find_aes(InterCode *code)
+{
+    AE *find = aes->next;
+    // if (code->kind == ASSIGN)
+    // {
+    //     while (1)
+    //     {
+
+    //         if (find->next == NULL)
+    //             break;
+    //         find = find->next;
+    //     }
+    // }
+    if (is_binop(code) == 1)
+    {
+        while (1)
+        {
+            if (find->lineno == -1)
+            {
+                break;
+            }
+            Operand *o1 = code->u.binop.op1;
+            Operand *o2 = code->u.binop.op2;
+            if (o1->u.var_no == find->op1->u.var_no && o2->kind == find->op2->kind && o2->u.var_no == find->op2->u.var_no && find->op_kind == code->kind)
+            {
+                // print_code(code, stdout);
+                return find;
+            }
+            if (find->next == NULL)
+                break;
+            find = find->next;
+        }
+    }
+    return NULL;
+}
+
+int common_sub_expression_elimination_block(BB *block)
+{
+    InterCodes *prev = block->start;
+    int ret = 0;
+    while (1)
+    {
+        InterCode *code = prev->code;
+        InterCodes *bl = prev->next;
+        if(prev->next==NULL) break;
+        while (1)
+        {
+            if (bl->code->kind == SPACE)
+                bl = bl->next;
+            else
+                break;
+        }
+        if (code->kind == ASSIGN)
+        {
+            int result = -1;
+            while (1)
+            {
+                if (bl->code->kind == ASSIGN)
+                {
+                    if (bl->code->u.assign.left->u.var_no == code->u.assign.left->u.var_no)
+                    {
+                        result = bl->code->lineno;
+                    }
+                }
+                if (is_binop(bl->code) == 1)
+                {
+                    if (bl->code->u.binop.result->u.var_no == code->u.assign.left->u.var_no)
+                    {
+                        result = bl->code->lineno;
+                    }
+                }
+                if (result != 1)
+                    break;
+                if (bl->next == NULL)
+                    break;
+                bl = bl->next;
+            }
+            if (result != -1)
+            {
+                bl = prev->next;
+                while (bl->code->lineno != result)
+                {
+                    if (bl->code->kind == ASSIGN)
+                    {
+                        if (bl->code->u.assign.right->u.var_no == code->u.assign.left->u.var_no)
+                        {
+                            bl->code->u.assign.right = code->u.assign.left;
+                            // print_code(bl->code, stdout);
+                        }
+                    }
+                    if (is_binop(bl->code) == 1)
+                    {
+                        if (bl->code->u.binop.op1->u.var_no == code->u.assign.left->u.var_no)
+                        {
+                            bl->code->u.binop.op1 = code->u.assign.left;
+                            // print_code(bl->code, stdout);
+                        }
+                        if (bl->code->u.binop.op2->kind != CONSTANT && bl->code->u.binop.op2->u.var_no == code->u.assign.left->u.var_no)
+                        {
+                            bl->code->u.binop.op2 = code->u.assign.left;
+                            // print_code(bl->code, stdout);
+                        }
+                    }
+                    bl = bl->next;
+                }
+            }
+        }
+        else if (is_binop(code) == 1)
+        {
+            // print_code(code, stdout);
+            // printf(" \n");
+            AE *ae = find_aes(code);
+            int result = -1;
+            if (ae == NULL)
+            {
+                insert_aes(code);
+            }
+            else
+            {
+                while (1)
+                {
+                    if (bl->code->kind == ASSIGN)
+                    {
+                        if (bl->code->u.assign.left->u.var_no == code->u.binop.result->u.var_no)
+                        {
+                            result = bl->code->lineno;
+                        }
+                    }
+                    if (is_binop(bl->code) == 1)
+                    {
+                        if (bl->code->u.binop.result->u.var_no == code->u.binop.result->u.var_no)
+                        {
+                            result = bl->code->lineno;
+                        }
+                    }
+                    if (result != 1)
+                        break;
+                    if (bl->next == NULL)
+                        break;
+                    bl = bl->next;
+                }
+                if (result != -1)
+                {
+                    bl = prev->next;
+                    while (bl->code->lineno != result)
+                    {
+                        if (bl->code->kind == ASSIGN)
+                        {
+                            if (bl->code->u.assign.right->u.var_no == code->u.binop.result->u.var_no)
+                            {
+                                bl->code->u.assign.right = code->u.binop.result;
+                                // print_code(bl->code, stdout);
+                            }
+                        }
+                        if (is_binop(bl->code) == 1)
+                        {
+                            if (bl->code->u.binop.op1->u.var_no == code->u.binop.result->u.var_no)
+                            {
+                                bl->code->u.binop.op1 = code->u.binop.result;
+                                // print_code(bl->code, stdout);
+                            }
+                            if (bl->code->u.binop.op2->kind != CONSTANT && bl->code->u.binop.op2->u.var_no == code->u.binop.result->u.var_no)
+                            {
+                                bl->code->u.binop.op2 = code->u.binop.result;
+                                // print_code(bl->code, stdout);
+                            }
+                        }
+                        bl = bl->next;
+                    }
+                }
+            }
+        }
+        if (prev == block->end)
+            break;
+        prev = prev->next;
+    }
+    return 0;
+}
+
+// 如果一个value只出现在一个bb里面，那么如果他被赋值成了另一个value，则可以直接替换，省略这条赋值语句，直到下一次被赋值为止
+void common_sub_expression_elimination()
+{
+    for (int i = 0; i < block_size; i++)
+    {
+        int ret = 0;
+        do
+        {
+            aes = malloc(sizeof(AE));
+            next = malloc(sizeof(AE));
+            next->next = NULL;
+            next->prev = aes;
+            aes->next = next;
+            aes->next->lineno = -1;
+            ret = common_sub_expression_elimination_block(blocks[i]);
         } while (ret != 0);
     }
 }
@@ -710,9 +1039,11 @@ void optimize(int v_index, char *file)
     var_size = v_index;
     get_BB();
     // print_blocks(stdout);
+    build_dag();
     constant_optimize();
     assign_optimize();
-    build_dag();
+    // common_sub_expression_elimination();
+    dead_code_optimize();
     // FILE *f = fopen("opt.ir", "w+");
     FILE *f = fopen(file, "w+");
     print_blocks(f);

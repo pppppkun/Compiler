@@ -426,7 +426,7 @@ void insert_binop(Operand *result, Operand *left, Operand *right, char *binop)
     code->u.binop.op1 = left;
     code->u.binop.op2 = right;
     code->u.binop.result = result;
-    if (result->kind != ADDRESS && left->kind!=ADDRESS && right->kind != ADDRESS)
+    if (result->kind != ADDRESS && left->kind != ADDRESS && right->kind != ADDRESS)
     {
         if (right->kind == CONSTANT)
         {
@@ -443,7 +443,8 @@ void insert_binop(Operand *result, Operand *left, Operand *right, char *binop)
                 return;
             }
         }
-        if(code->kind == DIV && left->u.var_no == right->u.var_no) {
+        if (code->kind == DIV && left->u.var_no == right->u.var_no)
+        {
             code->u.binop.op1 = get_constant(1);
             code->u.binop.op2 = get_constant(1);
             insert_code(code);
@@ -691,6 +692,8 @@ void gen_ir(int last_node, char *file_name)
     FILE *f = fopen(file_name, "w+");
     print_ir(f);
     fclose(f);
+    free(nodes);
+    free(symbol_table);
     if (whether_optimize == 0)
     {
         optimize(v_index, file_name);
@@ -739,6 +742,7 @@ char *get_array_name(int index)
     default:
         break;
     }
+    return NULL;
 }
 
 void translate_Program(int index)
@@ -939,6 +943,10 @@ Operand *translate_VarDec(int index)
             Operand *o = insert_variable_by_name(name, VARIABLE);
             insert_dec(o, sizeofStruct(s->type->field));
         }
+        // if (s->type->kind == ARRAY)
+        // {
+        //     Operand* o = insert_variable_by_name(name, VARIABLE);
+        // }
         return insert_variable_by_name(name, VARIABLE);
     }
     case VarDec_VarDecLbIntRb:
@@ -978,7 +986,37 @@ Operand *translate_Exp(int index)
         else if (r->kind == ADDRESS)
             insert_assign_dereference(l, r);
         else
-            insert_assign(l, r);
+        {
+            if (l->kind == ADDRESS && r->kind == ADDRESS)
+            {
+                insert_assign(l, r);
+            }
+            else
+            {
+                if (get_array_name(sons[0]) != NULL && get_array_name(sons[2]) != NULL)
+                {
+                    Symbol *a1 = SymbolGet(get_array_name(sons[0]), VARIABLE);
+                    Symbol *a2 = SymbolGet(get_array_name(sons[2]), VARIABLE);
+                    int asize = a1->type->array->size;
+                    int bsize = a2->type->array->size;
+                    Operand *a1o = malloc(sizeof(Operand));
+                    Operand *a2o = malloc(sizeof(Operand));
+                    insert_variable_by_ope(a1o, ADDRESS);
+                    insert_variable_by_ope(a2o, ADDRESS);
+                    for (int i = 0; i < asize; i++)
+                    {
+                        insert_array(a1o, l, get_constant(i * sizeofArrayItem(a1->name)));
+                        if (i < bsize)
+                        {
+                            insert_array(a2o, r, get_constant(i * sizeofArrayItem(a2->name)));
+                            insert_dereference_assign(a1o, a2o);
+                        }
+                        else insert_dereference_assign(a1o, get_constant(0));
+                    }
+                }
+                else insert_assign(l, r);
+            }
+        }
         return l;
     }
     case Exp_ExpAndExp:

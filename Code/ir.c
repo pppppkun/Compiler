@@ -997,24 +997,30 @@ Operand *translate_Exp(int index)
                 {
                     Symbol *a1 = SymbolGet(get_array_name(sons[0]), VARIABLE);
                     Symbol *a2 = SymbolGet(get_array_name(sons[2]), VARIABLE);
-                    int asize = a1->type->array->size;
-                    int bsize = a2->type->array->size;
-                    Operand *a1o = malloc(sizeof(Operand));
-                    Operand *a2o = malloc(sizeof(Operand));
-                    insert_variable_by_ope(a1o, ADDRESS);
-                    insert_variable_by_ope(a2o, ADDRESS);
-                    for (int i = 0; i < asize; i++)
+                    if (a1->kind == ARRAY && a2->kind == ARRAY)
                     {
-                        insert_array(a1o, l, get_constant(i * sizeofArrayItem(a1->name)));
-                        if (i < bsize)
+                        int asize = a1->type->array->size;
+                        int bsize = a2->type->array->size;
+                        Operand *a1o = malloc(sizeof(Operand));
+                        Operand *a2o = malloc(sizeof(Operand));
+                        insert_variable_by_ope(a1o, ADDRESS);
+                        insert_variable_by_ope(a2o, ADDRESS);
+                        for (int i = 0; i < asize; i++)
                         {
-                            insert_array(a2o, r, get_constant(i * sizeofArrayItem(a2->name)));
-                            insert_dereference_assign(a1o, a2o);
+                            insert_array(a1o, l, get_constant(i * sizeofArrayItem(a1->name)));
+                            if (i < bsize)
+                            {
+                                insert_array(a2o, r, get_constant(i * sizeofArrayItem(a2->name)));
+                                insert_dereference_assign(a1o, a2o);
+                            }
+                            else
+                                insert_dereference_assign(a1o, get_constant(0));
                         }
-                        else insert_dereference_assign(a1o, get_constant(0));
                     }
+                    else insert_assign(l, r);
                 }
-                else insert_assign(l, r);
+                else
+                    insert_assign(l, r);
             }
         }
         return l;

@@ -1063,7 +1063,12 @@ Type *ExpAnalyze(int index)
     case Exp_IdLpRp:
     {
         char *name = nodes[sons[0]]->value;
-        if(strcmp(name, "read") == 0) return INT;
+        if(strcmp(name, "read") == 0) {
+            Type* t = malloc(sizeof(Type));
+            t->kind=BASIC;
+            t->basic=INT;
+            return t;
+        }
         if (SymbolContains(name, VAR) == 1)
         {
             SemanticError(11, exp->lineno, "Not a function", name);
@@ -1249,8 +1254,8 @@ int semanticAnalyze(int last_node)
     Symbol* read = malloc(sizeof(Symbol));
     read->type = malloc(sizeof(Type));
     read->type->kind=DEF;
-    write->type->field = malloc(sizeof(Field));
-    write->type->field->type = INT;
+    read->type->field = malloc(sizeof(Field));
+    read->type->field->type = INT;
     read->kind = FUNCTION;
     read->name = "read";
     read->next = NULL;

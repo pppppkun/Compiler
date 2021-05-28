@@ -299,40 +299,40 @@ void get_BB()
         head = head->prev;
     blocks[i - 1]->end = head;
     block_size = i;
-    cfg = malloc(sizeof(CFGNode) * block_size);
-    for (int i = 0; i < block_size; i++)
-        cfg[i].in = malloc(sizeof(BB *) * 3);
-    //void build_cfg()
-    for (int i = 0; i < block_size; i++)
-    {
-        if (blocks[i]->end->code->kind == GOTO)
-        {
-            cfg[i].size = 1;
-            cfg[i].in[0] = find_BB_using_label(blocks[i]->end->code->u.label_index);
-        }
-        else if (blocks[i]->end->code->kind == IF_GOTO)
-        {
-            cfg[i].size = 1;
-            cfg[i].in[0] = find_BB_using_label(blocks[i]->end->code->u.if_go.label_index);
-            if (i != block_size - 1)
-            {
-                cfg[i].size = 2;
-                cfg[i].in[1] = blocks[i + 1];
-            }
-        }
-        else
-        {
-            if (i != block_size - 1)
-            {
-                cfg[i].size = 1;
-                cfg[i].in[0] = blocks[i + 1];
-            }
-            else
-            {
-                cfg[i].size = 0;
-            }
-        }
-    }
+    // cfg = malloc(sizeof(CFGNode) * block_size);
+    // for (int i = 0; i < block_size; i++)
+    //     cfg[i].in = malloc(sizeof(BB *) * 3);
+    // //void build_cfg()
+    // for (int i = 0; i < block_size; i++)
+    // {
+    //     if (blocks[i]->end->code->kind == GOTO)
+    //     {
+    //         cfg[i].size = 1;
+    //         cfg[i].in[0] = find_BB_using_label(blocks[i]->end->code->u.label_index);
+    //     }
+    //     else if (blocks[i]->end->code->kind == IF_GOTO)
+    //     {
+    //         cfg[i].size = 1;
+    //         cfg[i].in[0] = find_BB_using_label(blocks[i]->end->code->u.if_go.label_index);
+    //         if (i != block_size - 1)
+    //         {
+    //             cfg[i].size = 2;
+    //             cfg[i].in[1] = blocks[i + 1];
+    //         }
+    //     }
+    //     else
+    //     {
+    //         if (i != block_size - 1)
+    //         {
+    //             cfg[i].size = 1;
+    //             cfg[i].in[0] = blocks[i + 1];
+    //         }
+    //         else
+    //         {
+    //             cfg[i].size = 0;
+    //         }
+    //     }
+    // }
     // free(cfg);
 }
 

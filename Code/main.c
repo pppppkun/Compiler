@@ -150,6 +150,7 @@ int main(int argc, char **argv)
         semanticAnalyze(nodes_point - 1);
         if(IR_DEBUG) printf("Enter IR\n");
         gen_ir(nodes_point - 1, argv[2]);
+        toMIPS32(argv[2]);
     }
     return 0;
 }

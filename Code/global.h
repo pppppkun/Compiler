@@ -16,4 +16,5 @@ struct ASTNode{
 };
 ASTNode** nodes;
 int nodes_point;
+int toMIPS32(char*);
 #endif

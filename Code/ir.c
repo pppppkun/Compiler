@@ -689,14 +689,14 @@ void gen_ir(int last_node, char *file_name)
     symbol_to_operand->next = head;
 
     translate_Program(last_node);
-    FILE *f = fopen(file_name, "w+");
+    FILE *f = fopen("/dev/null", "w+");
     print_ir(f);
     fclose(f);
     free(nodes);
     free(symbol_table);
     if (whether_optimize == 0)
     {
-        optimize(v_index, file_name);
+        optimize(v_index, "out.ir");
     }
     // codes = codes->next;
     if (IR_DEBUG)
@@ -997,7 +997,7 @@ Operand *translate_Exp(int index)
                 {
                     Symbol *a1 = SymbolGet(get_array_name(sons[0]), VARIABLE);
                     Symbol *a2 = SymbolGet(get_array_name(sons[2]), VARIABLE);
-                    if (a1->kind == ARRAY && a2->kind == ARRAY)
+                    if (a1->type->kind == ARRAY && a2->type->kind == ARRAY)
                     {
                         int asize = a1->type->array->size;
                         int bsize = a2->type->array->size;

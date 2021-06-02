@@ -163,7 +163,7 @@ int toMIPS32(char *filename)
         {
             s_head->next = malloc(sizeof(assembly));
             s_head->next->code = malloc(sizeof(char) * 64);
-            sprintf(s_head->next->code, "%d:\n", code->u.label_index);
+            sprintf(s_head->next->code, "_%d:\n", code->u.label_index);
             s_head->next->prev = s_head;
             s_head = s_head->next;
             s_head->next = NULL;
@@ -172,7 +172,10 @@ int toMIPS32(char *filename)
         case IR_FUNCTION:
             s_head->next = malloc(sizeof(assembly));
             s_head->next->code = malloc(sizeof(char) * 64);
-            sprintf(s_head->next->code, "%s:\n", code->u.function_name);
+            if (strcmp(code->u.function_name, "main") == 0)
+                sprintf(s_head->next->code, "%s:\n", code->u.function_name);
+            else
+                sprintf(s_head->next->code, "%s_:\n", code->u.function_name);
             s_head->next->prev = s_head;
             s_head = s_head->next;
             s_head->next = NULL;
@@ -181,17 +184,17 @@ int toMIPS32(char *filename)
         {
             alloc_var(code->u.assign.left);
             alloc_var(code->u.assign.right);
-            int r1 = get_reg();
+            // int r1 = get_reg();
             int r2 = reg(code->u.assign.right);
-            s_head->next = malloc(sizeof(assembly));
-            s_head->next->code = malloc(sizeof(char) * 64);
-            //"  move $t%d, $t%d\n"
-            //"  "
-            sprintf(s_head->next->code, "  move $t%d, $t%d\n", r1, r2);
-            s_head->next->prev = s_head;
-            s_head = s_head->next;
-            s_head->next = NULL;
-            save(code->u.assign.left, r1);
+            // s_head->next = malloc(sizeof(assembly));
+            // s_head->next->code = malloc(sizeof(char) * 64);
+            // //"  move $t%d, $t%d\n"
+            // //"  "
+            // sprintf(s_head->next->code, "  move $t%d, $t%d\n", r1, r2);
+            // s_head->next->prev = s_head;
+            // s_head = s_head->next;
+            // s_head->next = NULL;
+            save(code->u.assign.left, r2);
             break;
         }
         case ADD:
@@ -199,16 +202,15 @@ int toMIPS32(char *filename)
             alloc_var(code->u.binop.result);
             alloc_var(code->u.binop.op1);
             alloc_var(code->u.binop.op2);
-            int r1 = get_reg();
             int r2 = reg(code->u.binop.op1);
             int r3 = reg(code->u.binop.op2);
             s_head->next = malloc(sizeof(assembly));
             s_head->next->code = malloc(sizeof(char) * 64);
-            sprintf(s_head->next->code, "  add $t%d, $t%d, $t%d\n", r1, r2, r3);
+            sprintf(s_head->next->code, "  add $t%d, $t%d, $t%d\n", r2, r2, r3);
             s_head->next->prev = s_head;
             s_head = s_head->next;
             s_head->next = NULL;
-            save(code->u.binop.result, r1);
+            save(code->u.binop.result, r2);
             break;
         }
         case SUB:
@@ -216,16 +218,15 @@ int toMIPS32(char *filename)
             alloc_var(code->u.binop.result);
             alloc_var(code->u.binop.op1);
             alloc_var(code->u.binop.op2);
-            int r1 = get_reg();
             int r2 = reg(code->u.binop.op1);
             int r3 = reg(code->u.binop.op2);
             s_head->next = malloc(sizeof(assembly));
             s_head->next->code = malloc(sizeof(char) * 64);
-            sprintf(s_head->next->code, "  sub $t%d, $t%d, $t%d\n", r1, r2, r3);
+            sprintf(s_head->next->code, "  sub $t%d, $t%d, $t%d\n", r2, r2, r3);
             s_head->next->prev = s_head;
             s_head = s_head->next;
             s_head->next = NULL;
-            save(code->u.binop.result, r1);
+            save(code->u.binop.result, r2);
             break;
         }
         case MUL:
@@ -233,16 +234,15 @@ int toMIPS32(char *filename)
             alloc_var(code->u.binop.result);
             alloc_var(code->u.binop.op1);
             alloc_var(code->u.binop.op2);
-            int r1 = get_reg();
             int r2 = reg(code->u.binop.op1);
             int r3 = reg(code->u.binop.op2);
             s_head->next = malloc(sizeof(assembly));
             s_head->next->code = malloc(sizeof(char) * 64);
-            sprintf(s_head->next->code, "  mul $t%d, $t%d, $t%d\n", r1, r2, r3);
+            sprintf(s_head->next->code, "  mul $t%d, $t%d, $t%d\n", r2, r2, r3);
             s_head->next->prev = s_head;
             s_head = s_head->next;
             s_head->next = NULL;
-            save(code->u.binop.result, r1);
+            save(code->u.binop.result, r2);
             break;
         }
         case DIV:
@@ -255,11 +255,11 @@ int toMIPS32(char *filename)
             int r3 = reg(code->u.binop.op2);
             s_head->next = malloc(sizeof(assembly));
             s_head->next->code = malloc(sizeof(char) * 64);
-            sprintf(s_head->next->code, "  div $t%d, $t%d\n  mflo $t%d\n", r2, r3, r1);
+            sprintf(s_head->next->code, "  div $t%d, $t%d\n  mflo $t%d\n", r2, r3, r2);
             s_head->next->prev = s_head;
             s_head = s_head->next;
             s_head->next = NULL;
-            save(code->u.binop.result, r1);
+            save(code->u.binop.result, r2);
             break;
         }
         case ADDR_ASSIGN:
@@ -314,18 +314,62 @@ int toMIPS32(char *filename)
         {
             s_head->next = malloc(sizeof(assembly));
             s_head->next->code = malloc(sizeof(char) * 64);
-            sprintf(s_head->next->code, "  j %d\n", code->u.label_index);
+            sprintf(s_head->next->code, "  j _%d\n", code->u.label_index);
             s_head->next->prev = s_head;
             s_head = s_head->next;
             s_head->next = NULL;
             break;
         }
         case IF_GOTO:
-
+        {
+            alloc_var(code->u.if_go.op1);
+            alloc_var(code->u.if_go.op2);
+            int r1 = reg(code->u.if_go.op1);
+            int r2 = reg(code->u.if_go.op2);
+            s_head->next = malloc(sizeof(assembly));
+            s_head->next->code = malloc(sizeof(char) * 64);
+            char *relop = code->u.if_go.relop;
+            if (strcmp(relop, ">=") == 0)
+            {
+                sprintf(s_head->next->code, "  bge $t%d, $t%d, _%d\n", r1, r2, code->u.if_go.label_index);
+            }
+            else if (strcmp(relop, "==") == 0)
+            {
+                sprintf(s_head->next->code, "  beq $t%d, $t%d, _%d\n", r1, r2, code->u.if_go.label_index);
+            }
+            else if (strcmp(relop, "<=") == 0)
+            {
+                sprintf(s_head->next->code, "  ble $t%d, $t%d, _%d\n", r1, r2, code->u.if_go.label_index);
+            }
+            else if (strcmp(relop, "<") == 0)
+            {
+                sprintf(s_head->next->code, "  blt $t%d, $t%d, _%d\n", r1, r2, code->u.if_go.label_index);
+            }
+            else if (strcmp(relop, ">") == 0)
+            {
+                sprintf(s_head->next->code, "  bgt $t%d, $t%d, _%d\n", r1, r2, code->u.if_go.label_index);
+            }
+            else if (strcmp(relop, "!=") == 0)
+            {
+                sprintf(s_head->next->code, "  bne $t%d, $t%d, _%d\n", r1, r2, code->u.if_go.label_index);
+            }
+            s_head->next->prev = s_head;
+            s_head = s_head->next;
+            s_head->next = NULL;
             break;
+        }
         case RETURN:
-
+        {
+            int r1 = reg(code->u.ret);
+            s_head->next = malloc(sizeof(assembly));
+            s_head->next->code = malloc(sizeof(char) * 64);
+            // printf("%d\n", r1);
+            sprintf(s_head->next->code, "  move $v0, $t%d\n  jr $ra\n", r1);
+            s_head->next->prev = s_head;
+            s_head = s_head->next;
+            s_head->next = NULL;
             break;
+        }
         case DEC:
         {
             val *nv = malloc(sizeof(val));
@@ -342,20 +386,74 @@ int toMIPS32(char *filename)
             break;
         }
         case ARG:
-
+        {
+            alloc_var(code->u.arg.arg);
+            int r1 = reg(code->u.arg.arg);
+            s_head->next = malloc(sizeof(assembly));
+            s_head->next->code = malloc(sizeof(char) * 64);
+            sprintf(s_head->next->code, "  addi $sp, $sp, -4\n  sw $t%d, 0($sp)\n", r1);
+            s_head->next->prev = s_head;
+            s_head = s_head->next;
+            s_head->next = NULL;
             break;
+        }
         case PARAM:
-
+        {
+            Variable *param = code->u.param;
+            while (param != NULL && param->operand != NULL)
+            {
+                alloc_var(param->operand);
+                int r1 = get_reg();
+                int r2 = get_reg();
+                s_head->next = malloc(sizeof(assembly));
+                s_head->next->code = malloc(sizeof(char) * 64);
+                sprintf(s_head->next->code, 
+                "  lw $t%d, 0($sp)\n  addi $sp, $sp, 4\n  lw $t%d, 0($sp)\n  sw $t%d, 0($sp)\n", 
+                r1, r2, r1);
+                s_head->next->prev = s_head;
+                s_head = s_head->next;
+                s_head->next = NULL;
+                save(param->operand, r2);
+                param = param->next;
+            }
             break;
+        }
         case CALL:
-
+        {
+            int r1 = get_reg();
+            s_head->next = malloc(sizeof(assembly));
+            s_head->next->code = malloc(sizeof(char) * 128);
+            sprintf(s_head->next->code, "  addi $sp, $sp, -4\n  sw $ra, 0($sp)\n  jal %s_\n  lw $ra, 0($sp)\n  addi $sp, $sp, 4\n  move $t%d, $v0\n", code->u.call.function_name, r1);
+            s_head->next->prev = s_head;
+            s_head = s_head->next;
+            s_head->next = NULL;
+            save(code->u.call.ret, r1);
             break;
+        }
         case READ:
+        {
 
             break;
+        }
         case WRITE:
-
+        {
+            int r1 = reg(code->u.rw);
+            s_head->next = malloc(sizeof(assembly));
+            s_head->next->code = malloc(sizeof(char) * 128);
+            sprintf(s_head->next->code, 
+            "  move $a0, $t%d\n  addi $sp, $sp, -4\n  sw $ra, 0($sp)\n  jal write\n  lw $ra, 0($sp)\n  addi $sp, $sp, 4\n", r1);
+            s_head->next->prev = s_head;
+            s_head = s_head->next;
+            s_head->next = NULL;
+            // r1 = mksur(ir->rw);
+            // oadd("move $a0, " + r1);
+            // oadd("addi $sp, $sp, -4");
+            // oadd("sw $ra, 0($sp)");
+            // oadd("jal write");
+            // oadd("lw $ra, 0($sp)");
+            // oadd("addi $sp, $sp, 4");
             break;
+        }
         default:
             break;
         }

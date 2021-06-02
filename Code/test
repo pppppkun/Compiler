@@ -1,5 +1,14 @@
+int add(int c,int d) {
+	return c + d;
+}
+
 int main() {
-	int a[10];
-	a[3] = 5;
+	int a,b,e;
+	a = 1;
+	b = 3;
+	e = add(a, b);
+	write(e);
+	e = add(b-1, a+4);
+	write(e);
 	return 0;
 }

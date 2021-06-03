@@ -22,6 +22,8 @@ assembly *data;
 assembly *s_head;
 val *vals;
 int regs = 0;
+int argc = 0;
+char *current_function = "main";
 
 int get_reg()
 {
@@ -154,6 +156,7 @@ int toMIPS32(char *filename)
     s_head->next = NULL;
     s_head->prev = next;
     InterCodes *head_ = codes->next;
+    argc = 0;
     while (head_ != NULL && head_->code != NULL)
     {
         InterCode *code = head_->code;
@@ -179,6 +182,7 @@ int toMIPS32(char *filename)
             s_head->next->prev = s_head;
             s_head = s_head->next;
             s_head->next = NULL;
+            current_function = code->u.function_name;
             break;
         case ASSIGN:
         {
@@ -387,6 +391,46 @@ int toMIPS32(char *filename)
         }
         case ARG:
         {
+            if (argc == 0)
+            {
+                InterCodes *temp = head_;
+                char *call_func;
+                while (temp->code->kind != CALL)
+                {
+                    temp = temp->next;
+                }
+                call_func = temp->code->u.call.function_name;
+                if (strcmp(call_func, current_function) == 0)
+                {
+                    Symbol *s = SymbolGet(call_func, FUNCTION);
+                    Field *f = s->type->field->next;
+                    while (f != NULL)
+                    {
+                        int v;
+                        Variable *temp = symbol_to_operand->next;
+                        while (temp != NULL && temp->operand != NULL)
+                        {
+                            if (temp->operand->kind != CONSTANT && strcmp(f->name, temp->name) == 0)
+                            {
+                                break;
+                            }
+                            else
+                                temp = temp->next;
+                        }
+                        printf("push param into stack v%d\n", temp->operand->u.var_no);
+                        int r2 = reg(temp->operand);
+                        s_head->next = malloc(sizeof(assembly));
+                        s_head->next->code = malloc(sizeof(char) * 128);
+                        s_head->next->code = malloc(sizeof(char) * 128);
+                        sprintf(s_head->next->code, "  addi $sp, $sp, -4\n  sw $t%d, 0($sp)\n", r2);
+                        s_head->next->prev = s_head;
+                        s_head = s_head->next;
+                        s_head->next = NULL;
+                        f = f->next;
+                    }
+                }
+            }
+            argc++;
             alloc_var(code->u.arg.arg);
             int r1 = reg(code->u.arg.arg);
             s_head->next = malloc(sizeof(assembly));
@@ -407,9 +451,9 @@ int toMIPS32(char *filename)
                 int r2 = get_reg();
                 s_head->next = malloc(sizeof(assembly));
                 s_head->next->code = malloc(sizeof(char) * 64);
-                sprintf(s_head->next->code, 
-                "  lw $t%d, 0($sp)\n  addi $sp, $sp, 4\n  lw $t%d, 0($sp)\n  sw $t%d, 0($sp)\n", 
-                r1, r2, r1);
+                sprintf(s_head->next->code,
+                        "  lw $t%d, 0($sp)\n  addi $sp, $sp, 4\n  lw $t%d, 0($sp)\n  sw $t%d, 0($sp)\n",
+                        r1, r2, r1);
                 s_head->next->prev = s_head;
                 s_head = s_head->next;
                 s_head->next = NULL;
@@ -420,7 +464,11 @@ int toMIPS32(char *filename)
         }
         case CALL:
         {
+            alloc_var(code->u.call.ret);
+            assembly *args = s_head;
             int r1 = get_reg();
+            Symbol *s = SymbolGet(code->u.call.function_name, FUNCTION);
+            Field *f = s->type->field->next;
             s_head->next = malloc(sizeof(assembly));
             s_head->next->code = malloc(sizeof(char) * 128);
             sprintf(s_head->next->code, "  addi $sp, $sp, -4\n  sw $ra, 0($sp)\n  jal %s_\n  lw $ra, 0($sp)\n  addi $sp, $sp, 4\n  move $t%d, $v0\n", code->u.call.function_name, r1);
@@ -428,30 +476,78 @@ int toMIPS32(char *filename)
             s_head = s_head->next;
             s_head->next = NULL;
             save(code->u.call.ret, r1);
+            f = s->type->field->next;
+            Field *f_temp = s->type->field->next;
+            int fc = 0;
+            while (f_temp != NULL)
+            {
+                f_temp = f_temp->next;
+                fc++;
+            }
+            fc--;
+            assembly *temp = s_head;
+            if (strcmp(current_function, code->u.call.function_name) == 0)
+            {
+                while (fc >= 0)
+                {
+                    int nfc = 0;
+                    f = s->type->field->next;
+                    while (nfc < fc)
+                    {
+                        f = f->next;
+                        nfc++;
+                    }
+                    fc--;
+                    int v;
+                    Variable *temp = symbol_to_operand->next;
+                    while (temp != NULL && temp->operand != NULL)
+                    {
+                        if (temp->operand->kind != CONSTANT && strcmp(f->name, temp->name) == 0)
+                        {
+                            break;
+                        }
+                        else
+                            temp = temp->next;
+                    }
+                    printf("pop param out stack v%d\n", temp->operand->u.var_no);
+                    int r2 = get_reg();
+                    s_head->next = malloc(sizeof(assembly));
+                    s_head->next->code = malloc(sizeof(char) * 128);
+                    sprintf(s_head->next->code, "  lw $t%d, 0($sp)\n  addi $sp, $sp, 4 \n", r2);
+                    s_head->next->prev = s_head;
+                    s_head = s_head->next;
+                    s_head->next = NULL;
+                    save(temp->operand, r2);
+                }
+            }
+            argc = 0;
             break;
         }
         case READ:
         {
-
+            alloc_var(code->u.rw);
+            int r1 = reg(code->u.rw);
+            s_head->next = malloc(sizeof(assembly));
+            s_head->next->code = malloc(sizeof(char) * 128);
+            sprintf(s_head->next->code,
+                    "  addi $sp, $sp, -4\n  sw $ra, 0($sp)\n  jal read\n  lw $ra, 0($sp)\n  addi $sp, $sp, 4\n  move $t%d, $v0\n", r1);
+            s_head->next->prev = s_head;
+            s_head = s_head->next;
+            s_head->next = NULL;
+            save(code->u.rw, r1);
             break;
         }
         case WRITE:
         {
+            alloc_var(code->u.rw);
             int r1 = reg(code->u.rw);
             s_head->next = malloc(sizeof(assembly));
             s_head->next->code = malloc(sizeof(char) * 128);
-            sprintf(s_head->next->code, 
-            "  move $a0, $t%d\n  addi $sp, $sp, -4\n  sw $ra, 0($sp)\n  jal write\n  lw $ra, 0($sp)\n  addi $sp, $sp, 4\n", r1);
+            sprintf(s_head->next->code,
+                    "  move $a0, $t%d\n  addi $sp, $sp, -4\n  sw $ra, 0($sp)\n  jal write\n  lw $ra, 0($sp)\n  addi $sp, $sp, 4\n", r1);
             s_head->next->prev = s_head;
             s_head = s_head->next;
             s_head->next = NULL;
-            // r1 = mksur(ir->rw);
-            // oadd("move $a0, " + r1);
-            // oadd("addi $sp, $sp, -4");
-            // oadd("sw $ra, 0($sp)");
-            // oadd("jal write");
-            // oadd("lw $ra, 0($sp)");
-            // oadd("addi $sp, $sp, 4");
             break;
         }
         default:

@@ -693,7 +693,7 @@ void gen_ir(int last_node, char *file_name)
     print_ir(f);
     fclose(f);
     free(nodes);
-    free(symbol_table);
+    // free(symbol_table);
     if (whether_optimize == 0)
     {
         optimize(v_index, "out.ir");

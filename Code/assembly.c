@@ -126,6 +126,32 @@ int save(Operand *o, int reg)
     }
 }
 
+int save_two(Operand *o, int reg)
+{
+    if (o->kind == VARIABLE || o->kind == ADDRESS)
+    {
+        int x = o->u.var_no;
+        int t = get_reg();
+        s_head->next = malloc(sizeof(assembly));
+        s_head->next->code = malloc(sizeof(char) * 64);
+        if (o->kind == VARIABLE)
+        {
+            sprintf(s_head->next->code,
+                    "  la $t%d, v%d\n  sw $t%d, 0($t%d)\n",
+                    t, x, reg, t);
+        }
+        else
+        {
+            sprintf(s_head->next->code,
+                    "  la $t%d, v%d\n  lw $t%d, 0($t%d)\n  sw $t%d, 0($t%d)\n",
+                    t, x, t, t, reg, t);
+        }
+        s_head->next->prev = s_head;
+        s_head = s_head->next;
+        s_head->next = NULL;
+    }
+}
+
 int toMIPS32(char *filename)
 {
     FILE *f = fopen(filename, "w+");
@@ -214,7 +240,7 @@ int toMIPS32(char *filename)
             s_head->next->prev = s_head;
             s_head = s_head->next;
             s_head->next = NULL;
-            save(code->u.binop.result, r2);
+            save_two(code->u.binop.result, r2);
             break;
         }
         case SUB:
@@ -230,7 +256,7 @@ int toMIPS32(char *filename)
             s_head->next->prev = s_head;
             s_head = s_head->next;
             s_head->next = NULL;
-            save(code->u.binop.result, r2);
+            save_two(code->u.binop.result, r2);
             break;
         }
         case MUL:
@@ -246,7 +272,7 @@ int toMIPS32(char *filename)
             s_head->next->prev = s_head;
             s_head = s_head->next;
             s_head->next = NULL;
-            save(code->u.binop.result, r2);
+            save_two(code->u.binop.result, r2);
             break;
         }
         case DIV:
@@ -263,7 +289,7 @@ int toMIPS32(char *filename)
             s_head->next->prev = s_head;
             s_head = s_head->next;
             s_head->next = NULL;
-            save(code->u.binop.result, r2);
+            save_two(code->u.binop.result, r2);
             break;
         }
         case ADDR_ASSIGN:
@@ -298,7 +324,7 @@ int toMIPS32(char *filename)
         }
         case ASSIGN_DEREFERENCE:
         {
-            printf("assign_def\n");
+            //printf("assign_def\n");
             break;
         }
         case DEREFERENCE_ASSIGN:
@@ -311,7 +337,7 @@ int toMIPS32(char *filename)
             // s_head->next->prev = s_head;
             // s_head = s_head->next;
             // s_head->next = NULL;
-            save(left, r2);
+            save_two(left, r2);
             break;
         }
         case GOTO:
@@ -417,7 +443,6 @@ int toMIPS32(char *filename)
                             else
                                 temp = temp->next;
                         }
-                        printf("push param into stack v%d\n", temp->operand->u.var_no);
                         int r2 = reg(temp->operand);
                         s_head->next = malloc(sizeof(assembly));
                         s_head->next->code = malloc(sizeof(char) * 128);
@@ -509,7 +534,6 @@ int toMIPS32(char *filename)
                         else
                             temp = temp->next;
                     }
-                    printf("pop param out stack v%d\n", temp->operand->u.var_no);
                     int r2 = get_reg();
                     s_head->next = malloc(sizeof(assembly));
                     s_head->next->code = malloc(sizeof(char) * 128);
@@ -543,8 +567,16 @@ int toMIPS32(char *filename)
             int r1 = reg(code->u.rw);
             s_head->next = malloc(sizeof(assembly));
             s_head->next->code = malloc(sizeof(char) * 128);
-            sprintf(s_head->next->code,
-                    "  move $a0, $t%d\n  addi $sp, $sp, -4\n  sw $ra, 0($sp)\n  jal write\n  lw $ra, 0($sp)\n  addi $sp, $sp, 4\n", r1);
+            if (code->u.rw->kind == VARIABLE || code->u.rw->kind == CONSTANT)
+            {
+                sprintf(s_head->next->code,
+                        "  move $a0, $t%d\n  addi $sp, $sp, -4\n  sw $ra, 0($sp)\n  jal write\n  lw $ra, 0($sp)\n  addi $sp, $sp, 4\n", r1);
+            }
+            else
+            {
+                sprintf(s_head->next->code,
+                        "  lw $t%d, 0($t%d)\n  lw $t%d, 0($t%d)\n  move $a0, $t%d\n  addi $sp, $sp, -4\n  sw $ra, 0($sp)\n  jal write\n  lw $ra, 0($sp)\n  addi $sp, $sp, 4\n", r1, r1, r1, r1, r1);
+            }
             s_head->next->prev = s_head;
             s_head = s_head->next;
             s_head->next = NULL;

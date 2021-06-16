@@ -1045,7 +1045,7 @@ void optimize(int v_index, char *file)
     // common_sub_expression_elimination();
     dead_code_optimize();
     // FILE *f = fopen("opt.ir", "w+");
-    FILE *f = fopen(file, "w+");
-    print_blocks(f);
-    fclose(f);
+    // FILE *f = fopen(file, "w+");
+    // print_blocks(f);
+    // fclose(f);
 }
